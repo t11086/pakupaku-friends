@@ -164,9 +164,10 @@
   }
   .zukan-slot {
     aspect-ratio: 1; background: #fff; border-radius: 18px; box-shadow: 0 3px 0 rgba(0,0,0,.1);
-    display: flex; align-items: center; justify-content: center; font-size: 11vw;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11vw;
     border: none; font-family: inherit;
   }
+  .zukan-hearts { font-size: 3.2vw; line-height: 1; margin-top: 2px; }
   .zukan-slot.locked { filter: grayscale(1) opacity(.35); font-size: 8vw; }
   .zukan-slot.hop { animation: friend-hop .5s; }
   @keyframes friend-hop {
@@ -233,6 +234,17 @@
   .color-choice.wobble { animation: wobble .4s; }
   .color-choice.correct { transform: scale(1.25); transition: transform .25s; }
   @keyframes wobble { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-8px);} 75%{transform:translateX(8px);} }
+
+  /* ===== かたちあわせ(ごほうび) ===== */
+  .shape-target {
+    font-size: 26vw; line-height: 1; margin: 4vh 0;
+    animation: bounce 2.4s ease-in-out infinite;
+    filter: drop-shadow(0 5px 0 rgba(0,0,0,.12));
+  }
+  .color-choice.shape {
+    background: #fff; font-size: 12vw; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+  }
 
   /* ===== ぼうしプレゼント(お披露目) ===== */
   .reveal-gift {
@@ -399,6 +411,16 @@
   </div>
 </div>
 
+<!-- かたちあわせ(1にちクリアのごほうびC) -->
+<div id="screen-shapematch" class="screen">
+  <button class="skip-btn" id="shapematch-skip">つぎへ →</button>
+  <div class="play-area">
+    <div class="guide">ごほうび! おなじ かたちを タッチしてね ⭐</div>
+    <div class="shape-target" id="shape-target"></div>
+    <div class="color-choices" id="shape-choices"></div>
+  </div>
+</div>
+
 <!-- あたらしいぼうしのお披露目 -->
 <div id="screen-hatreveal" class="screen">
   <div class="play-area">
@@ -424,6 +446,8 @@
   let day = Number(localStorage.getItem('pakupaku-day') || 1);
   const allFriends = ['🐰', '🐱', '🐶', '🐼', '🐨', '🦁', '🐸', '🐧', '🦊', '🐹', '🐻', '🐤'];
   let friends = JSON.parse(localStorage.getItem('pakupaku-zukan') || '[]');
+  // なかよし度: おすそわけした回数(おともだち絵文字 → 回数)
+  let hearts = JSON.parse(localStorage.getItem('pakupaku-hearts') || '{}');
 
   // ---------- サウンド(WebAudio) ----------
   let ctx;
@@ -558,6 +582,7 @@
     const f = friends[Math.floor(Math.random() * friends.length)];
     const b = document.createElement('button');
     b.className = 'cheer-friend'; b.textContent = f;
+    b.dataset.friend = f;
     b.addEventListener('click', () => {
       b.classList.remove('hop');
       void b.offsetWidth;
@@ -646,11 +671,13 @@
       setTimeout(() => c.remove(), 4000);
     }
   }
-  // ごほうびは ふうせんわり と いろあわせ を1日おきに交互に
+  // ごほうびは ふうせんわり → いろあわせ → かたちあわせ の3日ローテーション
   document.getElementById('next-day-btn').addEventListener('click', () => {
     document.getElementById('celebrate').classList.remove('active');
     sfx.tap();
-    if (day % 2 === 0) { show('colormatch'); setupColorMatch(); }
+    const kind = day % 3; // day1→🎈, day2→🎨, day3→⭐, …
+    if (kind === 2) { show('colormatch'); setupColorMatch(); }
+    else if (kind === 0) { show('shapematch'); setupShapeMatch(); }
     else { show('balloon'); setupBalloons(); }
   });
 
@@ -664,6 +691,7 @@
   }
   document.getElementById('balloon-skip').addEventListener('click', () => { sfx.tap(); advanceDay(); });
   document.getElementById('colormatch-skip').addEventListener('click', () => { sfx.tap(); advanceDay(); });
+  document.getElementById('shapematch-skip').addEventListener('click', () => { sfx.tap(); advanceDay(); });
 
   // ---------- 🎁 あたらしいぼうしのお披露目 ----------
   function showHatReveal(hat) {
@@ -703,6 +731,44 @@
         b.style.background = shine(c);
         b.onclick = () => {
           if (c === answerColor) {
+            choices.querySelectorAll('button').forEach(x => x.onclick = null);
+            b.classList.add('correct');
+            sfx.pop(); speakEn(answerName + '!');
+            if (round === 3) { sfx.fanfare(); setTimeout(advanceDay, 1000); }
+            else setTimeout(nextRound, 800);
+          } else {
+            // まちがえてもペナルティなし。ぷるぷる揺れるだけ
+            sfx.tap();
+            b.classList.remove('wobble'); void b.offsetWidth; b.classList.add('wobble');
+          }
+        };
+        choices.appendChild(b);
+      });
+    }
+    nextRound();
+  }
+
+  // ---------- ⭐ かたちあわせ(ごほうびミニゲーム・かたちの えいご) ----------
+  const shapeList = [
+    ['⭐', 'Star'], ['❤️', 'Heart'], ['🔵', 'Circle'],
+    ['🔶', 'Diamond'], ['🟩', 'Square'], ['🌙', 'Moon'],
+  ];
+  function setupShapeMatch() {
+    const target = document.getElementById('shape-target');
+    const choices = document.getElementById('shape-choices');
+    let round = 0;
+    function nextRound() {
+      round++;
+      const picks = [...shapeList].sort(() => Math.random() - .5).slice(0, 3);
+      const [answerShape, answerName] = picks[Math.floor(Math.random() * picks.length)];
+      target.textContent = answerShape;
+      choices.innerHTML = '';
+      picks.forEach(([s]) => {
+        const b = document.createElement('button');
+        b.className = 'color-choice shape';
+        b.textContent = s;
+        b.onclick = () => {
+          if (s === answerShape) {
             choices.querySelectorAll('button').forEach(x => x.onclick = null);
             b.classList.add('correct');
             sfx.pop(); speakEn(answerName + '!');
@@ -817,6 +883,10 @@
         cheer.classList.remove('begging'); bubble.remove();
         void cheer.offsetWidth; cheer.classList.add('hop');
         speakEn('Yummy! Thank you!', true);
+        // なかよし度アップ(ずかんのハートが増える)
+        const fe = cheer.dataset.friend;
+        hearts[fe] = (hearts[fe] || 0) + 1;
+        localStorage.setItem('pakupaku-hearts', JSON.stringify(hearts));
         setTimeout(() => completeTask('meal'), 900);
       }, 520);
     });
@@ -1006,6 +1076,13 @@
       const owned = friends.includes(f);
       slot.className = 'zukan-slot' + (owned ? '' : ' locked');
       slot.textContent = owned ? f : '❓';
+      if (owned && hearts[f]) {
+        // ごはんをおすそわけした回数だけハート(最大3つ表示)
+        const h = document.createElement('div');
+        h.className = 'zukan-hearts';
+        h.textContent = '❤️'.repeat(Math.min(3, hearts[f]));
+        slot.appendChild(h);
+      }
       slot.addEventListener('click', () => {
         if (!owned) { sfx.tap(); return; }
         slot.classList.remove('hop');
