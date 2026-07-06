@@ -124,7 +124,7 @@
   @keyframes pop-in { from { transform: scale(0); } to { transform: scale(1); } }
   .shower-btn {
     font-size: 14vw; width: 24vw; height: 24vw; max-width: 110px; max-height: 110px;
-    border: none; border-radius: 50%; background: #ff9f43; box-shadow: 0 5px 0 #d97e20;
+    border: none; border-radius: 50%; background: #fff; box-shadow: 0 5px 0 rgba(0,0,0,.18);
     margin-top: 10px; display: flex; align-items: center; justify-content: center;
     animation: pulse-btn 1s ease-in-out infinite;
   }
@@ -197,6 +197,17 @@
     animation: bob 2.2s ease-in-out infinite;
   }
   .cheer-friend.hop { animation: friend-hop .5s; }
+  /* 「ぼくにも ちょうだい!」アピール(おすそわけ待ち) */
+  .cheer-friend.begging { animation: beg .55s ease-in-out infinite; }
+  @keyframes beg {
+    0%,100% { transform: translateY(0) scale(1.2) rotate(-7deg); }
+    50%     { transform: translateY(-14px) scale(1.2) rotate(7deg); }
+  }
+  .beg-bubble {
+    position: absolute; top: -75%; left: 55%; font-size: .75em;
+    background: #fff; border-radius: 50% 50% 50% 0; padding: .12em .18em;
+    box-shadow: 0 2px 0 rgba(0,0,0,.12); animation: pop-in .25s;
+  }
 
   /* ===== ふうせんわり(ごほうび) ===== */
   #balloon-zone { position: relative; flex: 1; width: 100%; }
@@ -248,10 +259,17 @@
   .praise {
     position: fixed; top: 40%; left: 50%; transform: translate(-50%,-50%) scale(0);
     font-size: 28vw; z-index: 60;
-    pointer-events: none; transition: transform .25s cubic-bezier(.34,1.56,.64,1);
+    pointer-events: none; transition: transform .25s;
     filter: drop-shadow(3px 4px 0 rgba(0,0,0,.15));
   }
-  .praise.show { transform: translate(-50%,-50%) scale(1); }
+  .praise.show { animation: praise-pop .9s cubic-bezier(.34,1.56,.64,1) forwards; }
+  @keyframes praise-pop {
+    0%   { transform: translate(-50%,-50%) scale(0) rotate(-30deg); }
+    35%  { transform: translate(-50%,-50%) scale(1.25) rotate(12deg); }
+    55%  { transform: translate(-50%,-50%) scale(1) rotate(-10deg); }
+    75%  { transform: translate(-50%,-50%) scale(1.1) rotate(6deg); }
+    100% { transform: translate(-50%,-50%) scale(1) rotate(0deg); }
+  }
 </style>
 </head>
 <body>
@@ -561,6 +579,7 @@
     sfx.stamp();
     const en = praiseWords[Math.floor(Math.random() * praiseWords.length)];
     praiseEl.classList.add('show');
+    burstConfetti(12);
     speakEn(en, true); // 直前のカウント("Three!"等)を消さずに続ける
     const cheer = document.querySelector('.screen.active .cheer-friend');
     if (cheer) {
@@ -748,6 +767,12 @@
     const cheer = document.querySelector('#screen-meal .cheer-friend');
     if (!cheer) { completeTask('meal'); return; }
     document.getElementById('meal-guide').textContent = 'おともだちにも あげよう!';
+    // おともだちが「ぼくにもちょうだい!」と全力アピール
+    cheer.classList.add('begging');
+    const bubble = document.createElement('span');
+    bubble.className = 'beg-bubble'; bubble.textContent = '🥺';
+    cheer.appendChild(bubble);
+    speakEn('Me too, please!', true);
     const [f, en] = foodList[Math.floor(Math.random() * foodList.length)];
     const tray = document.getElementById('food-tray');
     const btn = document.createElement('button');
@@ -769,7 +794,8 @@
       });
       setTimeout(() => {
         fly.remove(); sfx.eat();
-        cheer.classList.remove('hop'); void cheer.offsetWidth; cheer.classList.add('hop');
+        cheer.classList.remove('begging'); bubble.remove();
+        void cheer.offsetWidth; cheer.classList.add('hop');
         speakEn('Yummy! Thank you!', true);
         setTimeout(() => completeTask('meal'), 900);
       }, 520);
@@ -986,13 +1012,16 @@
     char.classList.remove('sleeping');
     document.getElementById('zzz').style.display = 'none';
     sw.textContent = '💡';
+    sw.style.visibility = 'visible';
+    sw.classList.remove('rise');
     guide.textContent = 'でんきを けして ねんねさせてあげよう';
     sw.onclick = () => {
       if (scr.classList.contains('night')) return;
       scr.classList.add('night');
       char.classList.add('sleeping');
       document.getElementById('zzz').style.display = 'block';
-      sw.textContent = '';
+      // textContentを空にするとボタンの高さが消えてキャラが持ち上がるので、visibilityで隠す
+      sw.style.visibility = 'hidden';
       guide.textContent = 'すやすや… おやすみなさい';
       sfx.night();
       speak('おやすみなさい');
@@ -1007,6 +1036,9 @@
       }
       setTimeout(() => {
         sw.textContent = '🌞';
+        sw.style.visibility = 'visible';
+        sw.classList.add('rise'); // おひさまが下からのぼって自然に登場
+        setTimeout(() => sw.classList.remove('rise'), 1700);
         guide.textContent = 'おひさまを タッチして あさに しよう!';
         sw.onclick = () => {
           sw.onclick = null;
@@ -1016,7 +1048,7 @@
           document.getElementById('zzz').style.display = 'none';
           char.classList.remove('sleeping');
           char.classList.add('happy');
-          sw.classList.add('rise');
+          sw.classList.remove('rise'); void sw.offsetWidth; sw.classList.add('rise');
           guide.textContent = 'あさに なったよ! おはよう! ☀️';
           speakEn('Good morning!');
           [523, 659, 784, 1047].forEach((f, i) => tone(f, .25, i * .13, 'triangle', .25));
