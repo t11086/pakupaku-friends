@@ -40,7 +40,10 @@ export const shapeList = [
   ['🔶', 'Diamond'], ['🟩', 'Square'], ['🌙', 'Moon'],
 ];
 
-export const toyEmojis = ['🧸', '🚗', '⚽', '🪀', '🦖', '🚂', '🎈', '🥁'];
+export const toyList = [
+  ['🧸', 'Teddy bear'], ['🚗', 'Car'], ['⚽', 'Ball'], ['🪀', 'Yo-yo'],
+  ['🦖', 'Dinosaur'], ['🚂', 'Train'], ['🎈', 'Balloon'], ['🥁', 'Drum'],
+];
 
 export const hatLevels = [[20, '🌈'], [16, '🌟'], [13, '🎓'], [10, '👑'], [7, '🎩'], [5, '🧢'], [3, '🎀']];
 export const hatOf = d => (hatLevels.find(([n]) => d >= n) || [0, ''])[1];
