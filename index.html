@@ -116,9 +116,12 @@
   .bubble { position: absolute; font-size: 6vw; z-index: 4; pointer-events: none; animation: pop-in .25s; }
   @keyframes pop-in { from { transform: scale(0); } to { transform: scale(1); } }
   .shower-btn {
-    font-family: inherit; font-size: 6vw; padding: 12px 26px; border: none; border-radius: 999px;
-    background: #6ec6ff; color: #fff; box-shadow: 0 5px 0 #3d9be0; margin-top: 10px;
+    font-size: 14vw; width: 24vw; height: 24vw; max-width: 110px; max-height: 110px;
+    border: none; border-radius: 50%; background: #6ec6ff; box-shadow: 0 5px 0 #3d9be0;
+    margin-top: 10px; display: flex; align-items: center; justify-content: center;
+    animation: pulse-btn 1s ease-in-out infinite;
   }
+  @keyframes pulse-btn { 0%,100%{transform:scale(1);} 50%{transform:scale(1.18);} }
   .drop { position: fixed; font-size: 7vw; z-index: 42; pointer-events: none; animation: fall .8s linear forwards; }
   @keyframes fall { to { transform: translateY(90vh); opacity: 0; } }
 
@@ -127,18 +130,25 @@
   #screen-sleep.night .guide { background: rgba(255,255,255,.2); color: #fff; }
   .light-switch { font-family: inherit; font-size: 14vw; background: none; border: none; margin-top: 14px; transition: transform .1s; }
   .light-switch:active { transform: scale(1.15); }
+  .light-switch.rise { animation: sunrise 1.6s ease; }
+  @keyframes sunrise {
+    from { transform: translateY(14vw) scale(.4); opacity: .2; }
+    60% { transform: translateY(-4vw) scale(1.3); opacity: 1; }
+    to { transform: translateY(0) scale(1); }
+  }
+  #screen-sleep { transition: background 1s; }
   .zzz { position: absolute; top: 6%; right: 8%; font-size: 8vw; color: #cfd8ff; display: none; animation: floatz 2s ease-in-out infinite; }
   @keyframes floatz { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-12px);} }
   .star { position: absolute; font-size: 5vw; animation: twinkle 1.6s ease-in-out infinite; }
   @keyframes twinkle { 0%,100%{opacity:.3;} 50%{opacity:1;} }
 
   /* ===== おかたづけ ===== */
-  .toy { position: absolute; font-size: 11vw; background: none; border: none; z-index: 5; transition: transform .1s; }
+  .toy { position: absolute; font-size: 16vw; background: none; border: none; z-index: 5; transition: transform .1s; }
   .toy:active { transform: scale(1.2); }
   .toy.stored { visibility: hidden; }
-  .toy-box { font-size: 18vw; margin-top: 6px; transition: transform .2s; }
+  .toy-box { font-size: 26vw; margin-top: 2px; transition: transform .2s; }
   .toy-box.bounce { transform: scale(1.2); }
-  .flying-toy { position: fixed; font-size: 11vw; z-index: 40; pointer-events: none; transition: all .5s ease-in; }
+  .flying-toy { position: fixed; font-size: 16vw; z-index: 40; pointer-events: none; transition: all .5s ease-in; }
 
   /* ===== ずかん ===== */
   .zukan-grid {
@@ -243,7 +253,7 @@
       <div class="char-body"></div><div class="eye l"></div><div class="eye r"></div>
       <div class="cheek l"></div><div class="cheek r"></div><div class="mouth"></div>
     </div></div>
-    <button class="shower-btn" id="shower-btn" style="visibility:hidden">🚿 シャワー!</button>
+    <button class="shower-btn" id="shower-btn" style="visibility:hidden">🚿</button>
   </div>
 </div>
 
@@ -321,8 +331,28 @@
     night: () => [660, 550, 440].forEach((f, i) => tone(f, .4, i * .35, 'sine', .15)),
   };
 
-  // ---------- 音声よみあげ(合成音声が不自然なため無効化・効果音のみ) ----------
+  // ---------- 音声よみあげ ----------
+  // 日本語の合成音声は不自然なため使わない(案内は画面表示のみ)
   function speak() {}
+  // 英語は自然に聞こえるので、褒め言葉と食べ物の名前だけ明るい声で読み上げる
+  let enVoice = null;
+  function pickEnVoice() {
+    const vs = speechSynthesis.getVoices().filter(v => v.lang.replace('_', '-').startsWith('en'));
+    enVoice = vs.find(v => /Samantha|Google US English/i.test(v.name)) || vs[0] || null;
+  }
+  if ('speechSynthesis' in window) {
+    pickEnVoice();
+    speechSynthesis.onvoiceschanged = pickEnVoice;
+  }
+  function speakEn(text) {
+    if (!('speechSynthesis' in window)) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'en-US';
+    if (enVoice) u.voice = enVoice;
+    u.rate = .9; u.pitch = 1.4; // ゆっくり・高めで、こわくない明るい声に
+    speechSynthesis.speak(u);
+  }
 
   // ---------- 画面切り替え ----------
   const screens = document.querySelectorAll('.screen');
@@ -367,14 +397,19 @@
 
   // ---------- できた!演出 ----------
   const praiseEl = document.getElementById('praise');
-  const praiseWords = ['できた!', 'すごい!', 'えらいね!', 'やったね!'];
+  const praiseWords = [
+    ['できた!', 'You did it!'],
+    ['すごい!', 'Great job!'],
+    ['えらいね!', 'Awesome!'],
+    ['やったね!', 'Wonderful!'],
+  ];
   function completeTask(name) {
     tasks[name] = true;
     sfx.stamp();
-    const word = praiseWords[Math.floor(Math.random() * praiseWords.length)];
-    praiseEl.textContent = '💮 ' + word;
+    const [jp, en] = praiseWords[Math.floor(Math.random() * praiseWords.length)];
+    praiseEl.textContent = '💮 ' + jp;
     praiseEl.classList.add('show');
-    speak(word);
+    speakEn(en);
     setTimeout(() => {
       praiseEl.classList.remove('show');
       if (Object.values(tasks).every(Boolean)) celebrate();
@@ -420,27 +455,29 @@
   });
 
   // ---------- 🍚 ごはん ----------
-  const foodEmojis = ['🍎', '🍙', '🍌', '🥕', '🍞', '🍓'];
-  const countWords = ['いち', 'に、', 'さん!'];
+  const foodList = [
+    ['🍎', 'Apple'], ['🍙', 'Rice ball'], ['🍌', 'Banana'],
+    ['🥕', 'Carrot'], ['🍞', 'Bread'], ['🍓', 'Strawberry'],
+  ];
   function setupMeal() {
     const tray = document.getElementById('food-tray');
     tray.innerHTML = '';
     let eaten = 0;
-    const picks = [...foodEmojis].sort(() => Math.random() - .5).slice(0, 3);
-    picks.forEach(f => {
+    const picks = [...foodList].sort(() => Math.random() - .5).slice(0, 3);
+    picks.forEach(([f, en]) => {
       const btn = document.createElement('button');
       btn.className = 'food'; btn.textContent = f;
       btn.addEventListener('click', () => {
         if (btn.classList.contains('eaten')) return;
         btn.classList.add('eaten');
+        speakEn(en + '!');
         flyToMouth(btn, f, () => {
           eaten++;
           sfx.eat();
-          speak(countWords[eaten - 1]);
           const char = document.getElementById('char-meal');
           char.classList.add('happy');
           setTimeout(() => char.classList.remove('happy'), 500);
-          if (eaten === 3 && !tasks.meal) setTimeout(() => completeTask('meal'), 700);
+          if (eaten === 3) setTimeout(() => completeTask('meal'), 700);
         });
       });
       tray.appendChild(btn);
@@ -492,7 +529,7 @@
           g.style.transform = `scale(${.3 + g.dataset.hp * .12}) rotate(${Math.random() * 40 - 20}deg)`;
           if (g.dataset.hp <= 0) {
             g.classList.add('dead'); sfx.pop(); alive--;
-            if (alive === 0 && !tasks.teeth) {
+            if (alive === 0) {
               brush.style.display = 'none';
               speak('はが ぴかぴかに なったよ');
               setTimeout(() => completeTask('teeth'), 600);
@@ -557,7 +594,7 @@
     zone.ontouchmove = onMove;
     zone.onpointermove = e => { if (e.pointerType !== 'touch' && e.buttons) onMove(e); };
     showerBtn.onclick = () => {
-      if (tasks.bath) return;
+      showerBtn.onclick = null;
       sfx.tap();
       for (let i = 0; i < 16; i++) {
         const drop = document.createElement('div');
@@ -608,7 +645,7 @@
           fly.remove(); sfx.pop();
           box.classList.add('bounce');
           setTimeout(() => box.classList.remove('bounce'), 200);
-          if (--left === 0 && !tasks.tidy) setTimeout(() => completeTask('tidy'), 500);
+          if (--left === 0) setTimeout(() => completeTask('tidy'), 500);
         }, 520);
       });
       zone.appendChild(btn);
@@ -664,7 +701,22 @@
         sw.textContent = '🌞';
         guide.textContent = 'おひさまを タッチして あさに しよう!';
         sw.onclick = () => {
-          if (!tasks.sleep) completeTask('sleep');
+          sw.onclick = null;
+          // あさになる演出:夜が明けて、ぱっくんが目をさます
+          scr.classList.remove('night');
+          scr.querySelectorAll('.star').forEach(s => s.remove());
+          document.getElementById('zzz').style.display = 'none';
+          char.classList.remove('sleeping');
+          char.classList.add('happy');
+          sw.classList.add('rise');
+          guide.textContent = 'あさに なったよ! おはよう! ☀️';
+          speakEn('Good morning!');
+          [523, 659, 784, 1047].forEach((f, i) => tone(f, .25, i * .13, 'triangle', .25));
+          setTimeout(() => {
+            char.classList.remove('happy');
+            sw.classList.remove('rise');
+            completeTask('sleep');
+          }, 1800);
         };
       }, 3000);
     };
