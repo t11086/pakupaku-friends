@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>ぱくぱくフレンズ</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; touch-action: manipulation; }
+  body {
+    font-family: "Hiragino Maru Gothic ProN", "BIZ UDGothic", "Yu Gothic", sans-serif;
+    background: linear-gradient(#aee7ff, #fdf6d8);
+    user-select: none; -webkit-user-select: none;
+  }
+
+  .screen {
+    position: absolute; inset: 0; display: none;
+    flex-direction: column; align-items: center;
+    padding: max(12px, env(safe-area-inset-top)) 12px 12px;
+  }
+  .screen.active { display: flex; }
+
+  h1 { font-size: 7vw; color: #ff7ab0; text-shadow: 2px 2px 0 #fff; margin: 8px 0 2px; }
+  .subtitle { font-size: 4vw; color: #7a6a58; margin-bottom: 6px; }
+
+  /* ===== キャラクター ===== */
+  .char-wrap { position: relative; width: 56vw; max-width: 260px; aspect-ratio: 1; margin: 10px auto; }
+  .char-body {
+    position: absolute; inset: 0; border-radius: 48% 48% 44% 44%;
+    background: radial-gradient(circle at 35% 30%, #ffe08a, #ffb84d);
+    box-shadow: inset -8px -10px 0 rgba(0,0,0,.06);
+    animation: bounce 2.4s ease-in-out infinite;
+  }
+  @keyframes bounce { 0%,100%{transform:translateY(0) scale(1);} 50%{transform:translateY(-4%) scale(1.02,.98);} }
+  .eye {
+    position: absolute; top: 32%; width: 11%; height: 15%;
+    background: #4a3b2a; border-radius: 50%; transition: height .3s;
+  }
+  .eye::after { content:""; position:absolute; top:15%; left:20%; width:35%; height:35%; background:#fff; border-radius:50%; }
+  .eye.l { left: 26%; } .eye.r { right: 26%; }
+  .char.sleeping .eye { height: 3%; border-radius: 4px; }
+  .char.sleeping .eye::after { display: none; }
+  .cheek { position: absolute; top: 50%; width: 13%; height: 8%; background: #ffb3c1; border-radius: 50%; opacity:.8; }
+  .cheek.l { left: 14%; } .cheek.r { right: 14%; }
+  .mouth {
+    position: absolute; top: 55%; left: 50%; transform: translateX(-50%);
+    width: 22%; height: 12%; background: #a8442f; border-radius: 0 0 50% 50%;
+    overflow: hidden; transition: all .2s;
+  }
+  .mouth::after { content:""; position:absolute; bottom:-30%; left:15%; width:70%; height:60%; background:#ff8c7a; border-radius:50%; }
+  .char.open .mouth { height: 26%; border-radius: 40%; }
+  .char.happy .mouth { height: 18%; border-radius: 0 0 50% 50%; }
+  .char.sleeping .mouth { height: 6%; width: 10%; border-radius: 50%; }
+
+  /* ===== ホーム ===== */
+  .stamp-card {
+    display: flex; gap: 10px; background: #fff; border: 3px dashed #ffb84d;
+    border-radius: 18px; padding: 10px 16px; margin: 4px 0 10px;
+  }
+  .stamp { font-size: 9vw; max-font-size: 44px; filter: grayscale(1) opacity(.3); transition: all .3s; }
+  .stamp.done { filter: none; transform: scale(1.15); }
+  .menu { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; max-width: 400px; margin-top: 6px; }
+  .menu button {
+    font-family: inherit; font-size: 5.5vw; padding: 5vw 2vw; border: none; border-radius: 22px;
+    background: #fff; box-shadow: 0 5px 0 rgba(0,0,0,.12); color: #5a4a38;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+  }
+  .menu button .icon { font-size: 12vw; }
+  .menu button:active { transform: translateY(4px); box-shadow: 0 1px 0 rgba(0,0,0,.12); }
+  .menu button.done-badge { outline: 4px solid #7ed957; }
+  .menu button.done-badge::after { content: "✅ できた!"; font-size: 3.6vw; color: #4caf50; }
+  .day-label { font-size: 4.5vw; color: #7a6a58; background:#fff; border-radius: 999px; padding: 4px 18px; }
+
+  /* ===== 共通:あそびエリア ===== */
+  .play-area {
+    position: relative; width: 100%; max-width: 420px; flex: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .back-btn {
+    position: absolute; top: max(10px, env(safe-area-inset-top)); left: 12px; z-index: 30;
+    font-family: inherit; font-size: 5vw; border: none; border-radius: 999px;
+    background: #fff; padding: 8px 16px; box-shadow: 0 3px 0 rgba(0,0,0,.15); color: #7a6a58;
+  }
+  .guide { font-size: 4.8vw; color: #5a4a38; background: rgba(255,255,255,.85); border-radius: 14px; padding: 8px 14px; text-align: center; }
+
+  /* ===== ごはん ===== */
+  .food-tray { display: flex; gap: 5vw; margin-top: 12px; }
+  .food { font-size: 14vw; background: none; border: none; transition: transform .1s; }
+  .food:active { transform: scale(1.2); }
+  .food.eaten { visibility: hidden; }
+  .flying-food { position: fixed; font-size: 14vw; z-index: 40; pointer-events: none; transition: all .5s ease-in; }
+
+  /* ===== はみがき ===== */
+  .teeth-mouth {
+    position: relative; width: 80vw; max-width: 360px; height: 34vw; max-height: 160px;
+    background: #a8442f; border-radius: 24px; margin-top: 10px; overflow: hidden; touch-action: none;
+  }
+  .tooth-row { position: absolute; top: 0; left: 6%; width: 88%; height: 42%; display: flex; gap: 2%; }
+  .tooth { flex: 1; background: #fffdf5; border-radius: 0 0 40% 40%; box-shadow: inset 0 -3px 0 rgba(0,0,0,.08); }
+  .germ { position: absolute; font-size: 8vw; transition: transform .15s, opacity .2s; z-index: 2; }
+  .germ.dead { transform: scale(0); opacity: 0; }
+  .brush { position: fixed; font-size: 13vw; z-index: 41; pointer-events: none; transform: translate(-30%, -70%) rotate(-30deg); display: none; }
+
+  /* ===== おふろ ===== */
+  .bath-zone { position: relative; touch-action: none; }
+  .dirt { position: absolute; font-size: 7vw; z-index: 3; transition: opacity .3s, transform .3s; }
+  .dirt.clean { opacity: 0; transform: scale(0); }
+  .bubble { position: absolute; font-size: 6vw; z-index: 4; pointer-events: none; animation: pop-in .25s; }
+  @keyframes pop-in { from { transform: scale(0); } to { transform: scale(1); } }
+  .shower-btn {
+    font-family: inherit; font-size: 6vw; padding: 12px 26px; border: none; border-radius: 999px;
+    background: #6ec6ff; color: #fff; box-shadow: 0 5px 0 #3d9be0; margin-top: 10px;
+  }
+  .drop { position: fixed; font-size: 7vw; z-index: 42; pointer-events: none; animation: fall .8s linear forwards; }
+  @keyframes fall { to { transform: translateY(90vh); opacity: 0; } }
+
+  /* ===== ねんね ===== */
+  #screen-sleep.night { background: linear-gradient(#1a2350, #3b3560); }
+  #screen-sleep.night .guide { background: rgba(255,255,255,.2); color: #fff; }
+  .light-switch { font-family: inherit; font-size: 14vw; background: none; border: none; margin-top: 14px; transition: transform .1s; }
+  .light-switch:active { transform: scale(1.15); }
+  .zzz { position: absolute; top: 6%; right: 8%; font-size: 8vw; color: #cfd8ff; display: none; animation: floatz 2s ease-in-out infinite; }
+  @keyframes floatz { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-12px);} }
+  .star { position: absolute; font-size: 5vw; animation: twinkle 1.6s ease-in-out infinite; }
+  @keyframes twinkle { 0%,100%{opacity:.3;} 50%{opacity:1;} }
+
+  /* ===== おいわい ===== */
+  #celebrate {
+    position: absolute; inset: 0; z-index: 100; display: none;
+    flex-direction: column; align-items: center; justify-content: center;
+    background: rgba(255, 240, 200, .95); text-align: center;
+  }
+  #celebrate.active { display: flex; }
+  #celebrate h2 { font-size: 8vw; color: #ff7ab0; margin-bottom: 10px; }
+  #celebrate .big { font-size: 22vw; animation: bounce 1s infinite; }
+  #celebrate button {
+    font-family: inherit; font-size: 6vw; margin-top: 20px; padding: 14px 34px;
+    border: none; border-radius: 999px; background: #ff9f43; color: #fff; box-shadow: 0 5px 0 #d97e20;
+  }
+  .confetti { position: fixed; top: -10vh; font-size: 6vw; z-index: 101; pointer-events: none; animation: fall 2.4s linear forwards; }
+
+  .praise {
+    position: fixed; top: 40%; left: 50%; transform: translate(-50%,-50%) scale(0);
+    font-size: 10vw; color: #ff7ab0; text-shadow: 2px 2px 0 #fff; z-index: 60;
+    pointer-events: none; transition: transform .25s;
+  }
+  .praise.show { transform: translate(-50%,-50%) scale(1); }
+</style>
+</head>
+<body>
+
+<!-- ホーム -->
+<div id="screen-home" class="screen active">
+  <h1>ぱくぱくフレンズ</h1>
+  <div class="day-label"><span id="day-num">1</span>にちめ</div>
+  <div class="char-wrap"><div class="char" id="char-home">
+    <div class="char-body"></div><div class="eye l"></div><div class="eye r"></div>
+    <div class="cheek l"></div><div class="cheek r"></div><div class="mouth"></div>
+  </div></div>
+  <div class="stamp-card">
+    <span class="stamp" data-task="meal">🍚</span>
+    <span class="stamp" data-task="teeth">🪥</span>
+    <span class="stamp" data-task="bath">🛁</span>
+    <span class="stamp" data-task="sleep">🌙</span>
+  </div>
+  <div class="menu">
+    <button data-go="meal"><span class="icon">🍚</span>ごはん</button>
+    <button data-go="teeth"><span class="icon">🪥</span>はみがき</button>
+    <button data-go="bath"><span class="icon">🛁</span>おふろ</button>
+    <button data-go="sleep"><span class="icon">🌙</span>ねんね</button>
+  </div>
+</div>
+
+<!-- ごはん -->
+<div id="screen-meal" class="screen">
+  <button class="back-btn">← もどる</button>
+  <div class="play-area">
+    <div class="guide">たべものを タッチして たべさせてね</div>
+    <div class="char-wrap"><div class="char" id="char-meal">
+      <div class="char-body"></div><div class="eye l"></div><div class="eye r"></div>
+      <div class="cheek l"></div><div class="cheek r"></div><div class="mouth"></div>
+    </div></div>
+    <div class="food-tray" id="food-tray"></div>
+  </div>
+</div>
+
+<!-- はみがき -->
+<div id="screen-teeth" class="screen">
+  <button class="back-btn">← もどる</button>
+  <div class="play-area">
+    <div class="guide">はを ゆびで こすって ばいきんを やっつけよう!</div>
+    <div class="char-wrap" style="width:40vw"><div class="char open" id="char-teeth">
+      <div class="char-body"></div><div class="eye l"></div><div class="eye r"></div>
+      <div class="cheek l"></div><div class="cheek r"></div><div class="mouth"></div>
+    </div></div>
+    <div class="teeth-mouth" id="teeth-mouth">
+      <div class="tooth-row">
+        <div class="tooth"></div><div class="tooth"></div><div class="tooth"></div>
+        <div class="tooth"></div><div class="tooth"></div><div class="tooth"></div>
+      </div>
+    </div>
+  </div>
+  <div class="brush" id="brush">🪥</div>
+</div>
+
+<!-- おふろ -->
+<div id="screen-bath" class="screen">
+  <button class="back-btn">← もどる</button>
+  <div class="play-area">
+    <div class="guide" id="bath-guide">からだを なでなでして あわあわ にしてね</div>
+    <div class="char-wrap bath-zone" id="bath-zone"><div class="char" id="char-bath">
+      <div class="char-body"></div><div class="eye l"></div><div class="eye r"></div>
+      <div class="cheek l"></div><div class="cheek r"></div><div class="mouth"></div>
+    </div></div>
+    <button class="shower-btn" id="shower-btn" style="visibility:hidden">🚿 シャワー!</button>
+  </div>
+</div>
+
+<!-- ねんね -->
+<div id="screen-sleep" class="screen">
+  <button class="back-btn">← もどる</button>
+  <div class="play-area">
+    <div class="guide" id="sleep-guide">でんきを けして ねんねさせてあげよう</div>
+    <div class="zzz" id="zzz">💤</div>
+    <div class="char-wrap"><div class="char" id="char-sleep">
+      <div class="char-body"></div><div class="eye l"></div><div class="eye r"></div>
+      <div class="cheek l"></div><div class="cheek r"></div><div class="mouth"></div>
+    </div></div>
+    <button class="light-switch" id="light-switch">💡</button>
+  </div>
+</div>
+
+<!-- 1にちクリア -->
+<div id="celebrate" class="screen">
+  <h2>きょうも ぜんぶ できたね!</h2>
+  <div class="big">🎉</div>
+  <button id="next-day-btn">つぎのひへ →</button>
+</div>
+
+<div class="praise" id="praise">💮 できた!</div>
+
+<script>
+(() => {
+  // ---------- 状態 ----------
+  const tasks = { meal: false, teeth: false, bath: false, sleep: false };
+  let day = Number(localStorage.getItem('pakupaku-day') || 1);
+
+  // ---------- サウンド(WebAudio) ----------
+  let ctx;
+  function audio() { return ctx ||= new (window.AudioContext || window.webkitAudioContext)(); }
+  function tone(freq, dur = .15, delay = 0, type = 'sine', vol = .25) {
+    const a = audio(), o = a.createOscillator(), g = a.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, a.currentTime + delay);
+    g.gain.exponentialRampToValueAtTime(.001, a.currentTime + delay + dur);
+    o.connect(g).connect(a.destination);
+    o.start(a.currentTime + delay); o.stop(a.currentTime + delay + dur);
+  }
+  const sfx = {
+    tap: () => tone(600, .08),
+    eat: () => { tone(300, .08, 0, 'square', .15); tone(200, .1, .09, 'square', .15); },
+    pop: () => tone(900, .1, 0, 'triangle'),
+    scrub: () => tone(400 + Math.random() * 300, .05, 0, 'triangle', .1),
+    stamp: () => [523, 659, 784].forEach((f, i) => tone(f, .18, i * .12)),
+    fanfare: () => [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone(f, .22, i * .15, 'triangle', .3)),
+    night: () => [660, 550, 440].forEach((f, i) => tone(f, .4, i * .35, 'sine', .15)),
+  };
+
+  // ---------- 音声よみあげ ----------
+  function speak(text) {
+    if (!('speechSynthesis' in window)) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ja-JP'; u.rate = .9; u.pitch = 1.3;
+    speechSynthesis.speak(u);
+  }
+
+  // ---------- 画面切り替え ----------
+  const screens = document.querySelectorAll('.screen');
+  function show(name) {
+    screens.forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-' + name).classList.add('active');
+  }
+  const guides = {
+    meal: 'たべものを タッチして たべさせてね',
+    teeth: 'はを ゆびで こすって ばいきんを やっつけよう',
+    bath: 'からだを なでなでして あわあわに してね',
+    sleep: 'でんきを けして ねんねさせてあげよう',
+  };
+  document.querySelectorAll('.menu button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const go = btn.dataset.go;
+      sfx.tap(); show(go); speak(guides[go]);
+      if (go === 'meal') setupMeal();
+      if (go === 'teeth') setupTeeth();
+      if (go === 'bath') setupBath();
+      if (go === 'sleep') setupSleep();
+    });
+  });
+  document.querySelectorAll('.back-btn').forEach(b =>
+    b.addEventListener('click', () => { sfx.tap(); goHome(); }));
+
+  function goHome() {
+    document.getElementById('screen-sleep').classList.remove('night');
+    show('home'); renderHome();
+  }
+
+  function renderHome() {
+    document.getElementById('day-num').textContent = day;
+    document.querySelectorAll('.stamp').forEach(s =>
+      s.classList.toggle('done', tasks[s.dataset.task]));
+    document.querySelectorAll('.menu button').forEach(b =>
+      b.classList.toggle('done-badge', tasks[b.dataset.go]));
+  }
+
+  // ---------- できた!演出 ----------
+  const praiseEl = document.getElementById('praise');
+  const praiseWords = ['できた!', 'すごい!', 'えらいね!', 'やったね!'];
+  function completeTask(name) {
+    tasks[name] = true;
+    sfx.stamp();
+    const word = praiseWords[Math.floor(Math.random() * praiseWords.length)];
+    praiseEl.textContent = '💮 ' + word;
+    praiseEl.classList.add('show');
+    speak(word);
+    setTimeout(() => {
+      praiseEl.classList.remove('show');
+      if (Object.values(tasks).every(Boolean)) celebrate();
+      else goHome();
+    }, 1600);
+  }
+
+  function celebrate() {
+    show('home');
+    document.getElementById('celebrate').classList.add('active');
+    sfx.fanfare();
+    speak('きょうも ぜんぶ できたね! おめでとう!');
+    for (let i = 0; i < 24; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.textContent = ['🎉', '⭐', '💮', '🌸'][i % 4];
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.animationDelay = Math.random() * 1.2 + 's';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 4000);
+    }
+  }
+  document.getElementById('next-day-btn').addEventListener('click', () => {
+    day++; localStorage.setItem('pakupaku-day', day);
+    Object.keys(tasks).forEach(k => tasks[k] = false);
+    document.getElementById('celebrate').classList.remove('active');
+    sfx.tap(); goHome();
+    speak('あたらしい あさが きたよ! きょうも いっぱい あそぼうね');
+  });
+
+  // ---------- 🍚 ごはん ----------
+  const foodEmojis = ['🍎', '🍙', '🍌', '🥕', '🍞', '🍓'];
+  const countWords = ['いち', 'に、', 'さん!'];
+  function setupMeal() {
+    const tray = document.getElementById('food-tray');
+    tray.innerHTML = '';
+    let eaten = 0;
+    const picks = [...foodEmojis].sort(() => Math.random() - .5).slice(0, 3);
+    picks.forEach(f => {
+      const btn = document.createElement('button');
+      btn.className = 'food'; btn.textContent = f;
+      btn.addEventListener('click', () => {
+        if (btn.classList.contains('eaten')) return;
+        btn.classList.add('eaten');
+        flyToMouth(btn, f, () => {
+          eaten++;
+          sfx.eat();
+          speak(countWords[eaten - 1]);
+          const char = document.getElementById('char-meal');
+          char.classList.add('happy');
+          setTimeout(() => char.classList.remove('happy'), 500);
+          if (eaten === 3 && !tasks.meal) setTimeout(() => completeTask('meal'), 700);
+        });
+      });
+      tray.appendChild(btn);
+    });
+  }
+  function flyToMouth(fromEl, emoji, onArrive) {
+    const char = document.getElementById('char-meal');
+    char.classList.add('open');
+    const fly = document.createElement('div');
+    fly.className = 'flying-food'; fly.textContent = emoji;
+    const from = fromEl.getBoundingClientRect();
+    const to = char.querySelector('.mouth').getBoundingClientRect();
+    fly.style.left = from.left + 'px'; fly.style.top = from.top + 'px';
+    document.body.appendChild(fly);
+    requestAnimationFrame(() => {
+      fly.style.left = to.left + 'px'; fly.style.top = to.top + 'px';
+      fly.style.transform = 'scale(.2)';
+    });
+    setTimeout(() => { fly.remove(); char.classList.remove('open'); onArrive(); }, 520);
+  }
+
+  // ---------- 🪥 はみがき ----------
+  function setupTeeth() {
+    const mouth = document.getElementById('teeth-mouth');
+    mouth.querySelectorAll('.germ').forEach(g => g.remove());
+    let alive = 4;
+    for (let i = 0; i < 4; i++) {
+      const g = document.createElement('div');
+      g.className = 'germ'; g.textContent = '👾';
+      g.dataset.hp = 6;
+      g.style.left = (8 + i * 23 + Math.random() * 6) + '%';
+      g.style.top = (8 + Math.random() * 20) + '%';
+      mouth.appendChild(g);
+    }
+    const brush = document.getElementById('brush');
+    let lastScrub = 0;
+    function onMove(e) {
+      const t = e.touches ? e.touches[0] : e;
+      brush.style.display = 'block';
+      brush.style.left = t.clientX + 'px'; brush.style.top = t.clientY + 'px';
+      const now = Date.now();
+      if (now - lastScrub > 90) { sfx.scrub(); lastScrub = now; }
+      mouth.querySelectorAll('.germ:not(.dead)').forEach(g => {
+        const r = g.getBoundingClientRect();
+        if (t.clientX > r.left - 12 && t.clientX < r.right + 12 &&
+            t.clientY > r.top - 12 && t.clientY < r.bottom + 12) {
+          g.dataset.hp--;
+          g.style.transform = `scale(${.3 + g.dataset.hp * .12}) rotate(${Math.random() * 40 - 20}deg)`;
+          if (g.dataset.hp <= 0) {
+            g.classList.add('dead'); sfx.pop(); alive--;
+            if (alive === 0 && !tasks.teeth) {
+              brush.style.display = 'none';
+              speak('はが ぴかぴかに なったよ');
+              setTimeout(() => completeTask('teeth'), 600);
+            }
+          }
+        }
+      });
+      e.preventDefault();
+    }
+    mouth.ontouchmove = onMove;
+    mouth.onpointermove = e => { if (e.pointerType !== 'touch' && e.buttons) onMove(e); };
+    mouth.ontouchend = mouth.onpointerup = () => { brush.style.display = 'none'; };
+  }
+
+  // ---------- 🛁 おふろ ----------
+  function setupBath() {
+    const zone = document.getElementById('bath-zone');
+    const guide = document.getElementById('bath-guide');
+    const showerBtn = document.getElementById('shower-btn');
+    zone.querySelectorAll('.dirt, .bubble').forEach(el => el.remove());
+    showerBtn.style.visibility = 'hidden';
+    guide.textContent = 'からだを なでなでして あわあわ にしてね';
+    let dirty = 3;
+    const spots = [[20, 30], [60, 55], [35, 70]];
+    spots.forEach(([x, y]) => {
+      const d = document.createElement('div');
+      d.className = 'dirt'; d.textContent = '🟤';
+      d.dataset.hp = 5;
+      d.style.left = x + '%'; d.style.top = y + '%';
+      zone.appendChild(d);
+    });
+    let lastBubble = 0;
+    function onMove(e) {
+      const t = e.touches ? e.touches[0] : e;
+      const zr = zone.getBoundingClientRect();
+      const now = Date.now();
+      if (now - lastBubble > 120) {
+        lastBubble = now; sfx.scrub();
+        const b = document.createElement('div');
+        b.className = 'bubble'; b.textContent = '🫧';
+        b.style.left = (t.clientX - zr.left - 10) + 'px';
+        b.style.top = (t.clientY - zr.top - 10) + 'px';
+        zone.appendChild(b);
+        setTimeout(() => b.remove(), 1800);
+      }
+      zone.querySelectorAll('.dirt:not(.clean)').forEach(d => {
+        const r = d.getBoundingClientRect();
+        if (t.clientX > r.left - 16 && t.clientX < r.right + 16 &&
+            t.clientY > r.top - 16 && t.clientY < r.bottom + 16) {
+          if (--d.dataset.hp <= 0) {
+            d.classList.add('clean'); sfx.pop(); dirty--;
+            if (dirty === 0) {
+              guide.textContent = 'シャワーで ながそう!';
+              speak('シャワーで ながそう!');
+              showerBtn.style.visibility = 'visible';
+            }
+          }
+        }
+      });
+      e.preventDefault();
+    }
+    zone.ontouchmove = onMove;
+    zone.onpointermove = e => { if (e.pointerType !== 'touch' && e.buttons) onMove(e); };
+    showerBtn.onclick = () => {
+      if (tasks.bath) return;
+      sfx.tap();
+      for (let i = 0; i < 16; i++) {
+        const drop = document.createElement('div');
+        drop.className = 'drop'; drop.textContent = '💧';
+        drop.style.left = (15 + Math.random() * 70) + 'vw';
+        drop.style.top = '5vh';
+        drop.style.animationDelay = (Math.random() * .5) + 's';
+        document.body.appendChild(drop);
+        setTimeout(() => drop.remove(), 1500);
+      }
+      [400, 500, 600].forEach((f, i) => tone(f, .3, i * .1, 'sine', .12));
+      zone.querySelectorAll('.bubble').forEach(b => b.remove());
+      speak('ぴかぴかに なったね');
+      setTimeout(() => completeTask('bath'), 1200);
+    };
+  }
+
+  // ---------- 🌙 ねんね ----------
+  function setupSleep() {
+    const scr = document.getElementById('screen-sleep');
+    const sw = document.getElementById('light-switch');
+    const guide = document.getElementById('sleep-guide');
+    const char = document.getElementById('char-sleep');
+    scr.classList.remove('night');
+    scr.querySelectorAll('.star').forEach(s => s.remove());
+    char.classList.remove('sleeping');
+    document.getElementById('zzz').style.display = 'none';
+    sw.textContent = '💡';
+    guide.textContent = 'でんきを けして ねんねさせてあげよう';
+    sw.onclick = () => {
+      if (scr.classList.contains('night')) return;
+      scr.classList.add('night');
+      char.classList.add('sleeping');
+      document.getElementById('zzz').style.display = 'block';
+      sw.textContent = '';
+      guide.textContent = 'すやすや… おやすみなさい';
+      sfx.night();
+      speak('おやすみなさい');
+      const area = scr.querySelector('.play-area');
+      for (let i = 0; i < 8; i++) {
+        const s = document.createElement('div');
+        s.className = 'star'; s.textContent = '⭐';
+        s.style.left = Math.random() * 90 + '%';
+        s.style.top = Math.random() * 30 + '%';
+        s.style.animationDelay = Math.random() * 1.5 + 's';
+        area.appendChild(s);
+      }
+      setTimeout(() => {
+        sw.textContent = '🌞';
+        guide.textContent = 'おひさまを タッチして あさに しよう!';
+        sw.onclick = () => {
+          if (!tasks.sleep) completeTask('sleep');
+        };
+      }, 3000);
+    };
+  }
+
+  renderHome();
+})();
+</script>
+</body>
+</html>
