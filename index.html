@@ -208,6 +208,28 @@
   .balloon::after { content: ""; position: absolute; left: 50%; top: 99%; width: 2px; height: 9vw; background: #9c8a76; }
   .balloon.popped { transition: transform .18s, opacity .18s; transform: scale(1.7); opacity: 0; pointer-events: none; }
 
+  /* ===== いろあわせ(ごほうび) ===== */
+  .color-target {
+    width: 34vw; height: 34vw; max-width: 160px; max-height: 160px;
+    border-radius: 50%; margin: 4vh 0; box-shadow: 0 5px 0 rgba(0,0,0,.12);
+    animation: bounce 2.4s ease-in-out infinite;
+  }
+  .color-choices { display: flex; gap: 6vw; }
+  .color-choice {
+    width: 22vw; height: 22vw; max-width: 100px; max-height: 100px;
+    border: none; border-radius: 50%; box-shadow: 0 5px 0 rgba(0,0,0,.18);
+  }
+  .color-choice.wobble { animation: wobble .4s; }
+  .color-choice.correct { transform: scale(1.25); transition: transform .25s; }
+  @keyframes wobble { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-8px);} 75%{transform:translateX(8px);} }
+
+  /* ===== ぼうしプレゼント(お披露目) ===== */
+  .reveal-gift {
+    font-size: 34vw; background: none; border: none; margin-top: 4vh;
+    animation: pulse-btn 1s ease-in-out infinite;
+  }
+  .reveal-gift.opened { animation: friend-hop .6s; }
+
   /* ===== おいわい ===== */
   #celebrate {
     position: absolute; inset: 0; z-index: 100; display: none;
@@ -263,7 +285,7 @@
 <div id="screen-meal" class="screen">
   <button class="back-btn">← もどる</button>
   <div class="play-area">
-    <div class="guide">たべものを タッチして たべさせてね</div>
+    <div class="guide" id="meal-guide">たべものを タッチして たべさせてね</div>
     <div class="char-wrap"><div class="char" id="char-meal">
       <div class="char-body"></div><div class="eye l"></div><div class="eye r"></div>
       <div class="cheek l"></div><div class="cheek r"></div><div class="mouth"></div>
@@ -346,6 +368,24 @@
   <div class="play-area">
     <div class="guide">ごほうび! ふうせんを ぜんぶ わってね 🎈</div>
     <div id="balloon-zone"></div>
+  </div>
+</div>
+
+<!-- いろあわせ(1にちクリアのごほうびB・ふうせんと交互) -->
+<div id="screen-colormatch" class="screen">
+  <button class="skip-btn" id="colormatch-skip">つぎへ →</button>
+  <div class="play-area">
+    <div class="guide">ごほうび! おなじ いろを タッチしてね 🎨</div>
+    <div class="color-target" id="color-target"></div>
+    <div class="color-choices" id="color-choices"></div>
+  </div>
+</div>
+
+<!-- あたらしいぼうしのお披露目 -->
+<div id="screen-hatreveal" class="screen">
+  <div class="play-area">
+    <div class="guide" id="hat-guide">ぱっくんに プレゼントが とどいたよ! あけてみて!</div>
+    <button class="reveal-gift" id="gift-btn">🎁</button>
   </div>
 </div>
 
@@ -458,8 +498,9 @@
 
   // ---------- 🎀 ぼうし(にっすうで きせかえが ふえる) ----------
   const hatLevels = [[10, '👑'], [7, '🎩'], [5, '🧢'], [3, '🎀']];
+  const hatOf = d => (hatLevels.find(([n]) => d >= n) || [0, ''])[1];
   function applyHats() {
-    const hat = (hatLevels.find(([d]) => day >= d) || [0, ''])[1];
+    const hat = hatOf(day);
     document.querySelectorAll('.char').forEach(c => {
       let el = c.querySelector('.char-hat');
       if (!el) {
@@ -553,7 +594,10 @@
     document.getElementById('celebrate').classList.add('active');
     sfx.fanfare();
     speak('きょうも ぜんぶ できたね! おめでとう!');
-    for (let i = 0; i < 24; i++) {
+    burstConfetti(24);
+  }
+  function burstConfetti(n) {
+    for (let i = 0; i < n; i++) {
       const c = document.createElement('div');
       c.className = 'confetti';
       c.textContent = ['🎉', '⭐', '💮', '🌸'][i % 4];
@@ -563,17 +607,79 @@
       setTimeout(() => c.remove(), 4000);
     }
   }
+  // ごほうびは ふうせんわり と いろあわせ を1日おきに交互に
   document.getElementById('next-day-btn').addEventListener('click', () => {
     document.getElementById('celebrate').classList.remove('active');
-    sfx.tap(); show('balloon'); setupBalloons();
+    sfx.tap();
+    if (day % 2 === 0) { show('colormatch'); setupColorMatch(); }
+    else { show('balloon'); setupBalloons(); }
   });
 
   function advanceDay() {
+    const prevHat = hatOf(day);
     day++; localStorage.setItem('pakupaku-day', day);
     Object.keys(tasks).forEach(k => tasks[k] = false);
-    goHome();
+    const newHat = hatOf(day);
+    if (newHat !== prevHat) showHatReveal(newHat);
+    else goHome();
   }
   document.getElementById('balloon-skip').addEventListener('click', () => { sfx.tap(); advanceDay(); });
+  document.getElementById('colormatch-skip').addEventListener('click', () => { sfx.tap(); advanceDay(); });
+
+  // ---------- 🎁 あたらしいぼうしのお披露目 ----------
+  function showHatReveal(hat) {
+    show('hatreveal');
+    const gift = document.getElementById('gift-btn');
+    const guide = document.getElementById('hat-guide');
+    guide.textContent = 'ぱっくんに プレゼントが とどいたよ! あけてみて!';
+    gift.textContent = '🎁';
+    gift.classList.remove('opened');
+    gift.onclick = () => {
+      gift.onclick = null;
+      gift.textContent = hat;
+      gift.classList.add('opened');
+      guide.textContent = 'あたらしい ぼうしを もらったよ!';
+      sfx.fanfare();
+      speakEn('A new hat!');
+      burstConfetti(16);
+      setTimeout(goHome, 2500);
+    };
+  }
+
+  // ---------- 🎨 いろあわせ(ごほうびミニゲーム・いろの えいご) ----------
+  function setupColorMatch() {
+    const target = document.getElementById('color-target');
+    const choices = document.getElementById('color-choices');
+    const shine = c => `radial-gradient(circle at 35% 30%, rgba(255,255,255,.6), transparent 55%), ${c}`;
+    let round = 0;
+    function nextRound() {
+      round++;
+      const picks = [...balloonColors].sort(() => Math.random() - .5).slice(0, 3);
+      const [answerColor, answerName] = picks[Math.floor(Math.random() * picks.length)];
+      target.style.background = shine(answerColor);
+      choices.innerHTML = '';
+      picks.forEach(([c]) => {
+        const b = document.createElement('button');
+        b.className = 'color-choice';
+        b.style.background = shine(c);
+        b.onclick = () => {
+          if (c === answerColor) {
+            choices.querySelectorAll('button').forEach(x => x.onclick = null);
+            b.classList.add('correct');
+            sfx.pop(); speakEn(answerName + '!');
+            if (round === 3) { sfx.fanfare(); setTimeout(advanceDay, 1000); }
+            else setTimeout(nextRound, 800);
+          } else {
+            // まちがえてもペナルティなし。ぷるぷる揺れるだけ
+            sfx.tap();
+            b.classList.remove('wobble'); void b.offsetWidth; b.classList.add('wobble');
+          }
+        };
+        choices.appendChild(b);
+      });
+    }
+    nextRound();
+  }
 
   // ---------- 🎈 ふうせんわり(ごほうびミニゲーム・いろの えいご) ----------
   const balloonColors = [
@@ -614,6 +720,7 @@
   function setupMeal() {
     const tray = document.getElementById('food-tray');
     tray.innerHTML = '';
+    document.getElementById('meal-guide').textContent = 'たべものを タッチして たべさせてね';
     let eaten = 0;
     const picks = [...foodList].sort(() => Math.random() - .5).slice(0, 3);
     picks.forEach(([f, en]) => {
@@ -630,10 +737,42 @@
           const char = document.getElementById('char-meal');
           char.classList.add('happy');
           setTimeout(() => char.classList.remove('happy'), 500);
-          if (eaten === 3) setTimeout(() => completeTask('meal'), 700);
+          if (eaten === 3) setTimeout(offerShare, 700);
         });
       });
       tray.appendChild(btn);
+    });
+  }
+  // おうえんに来ているおともだちにも1つおすそわけしてからタスク完了
+  function offerShare() {
+    const cheer = document.querySelector('#screen-meal .cheer-friend');
+    if (!cheer) { completeTask('meal'); return; }
+    document.getElementById('meal-guide').textContent = 'おともだちにも あげよう!';
+    const [f, en] = foodList[Math.floor(Math.random() * foodList.length)];
+    const tray = document.getElementById('food-tray');
+    const btn = document.createElement('button');
+    btn.className = 'food'; btn.textContent = f;
+    tray.appendChild(btn);
+    btn.addEventListener('click', () => {
+      if (btn.classList.contains('eaten')) return;
+      btn.classList.add('eaten');
+      speakEn(en + '!');
+      const fly = document.createElement('div');
+      fly.className = 'flying-food'; fly.textContent = f;
+      const from = btn.getBoundingClientRect();
+      const to = cheer.getBoundingClientRect();
+      fly.style.left = from.left + 'px'; fly.style.top = from.top + 'px';
+      document.body.appendChild(fly);
+      requestAnimationFrame(() => {
+        fly.style.left = to.left + 'px'; fly.style.top = to.top + 'px';
+        fly.style.transform = 'scale(.3)';
+      });
+      setTimeout(() => {
+        fly.remove(); sfx.eat();
+        cheer.classList.remove('hop'); void cheer.offsetWidth; cheer.classList.add('hop');
+        speakEn('Yummy! Thank you!', true);
+        setTimeout(() => completeTask('meal'), 900);
+      }, 520);
     });
   }
   function flyToMouth(fromEl, emoji, onArrive) {
