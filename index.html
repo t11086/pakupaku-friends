@@ -37,11 +37,12 @@
     transform: translateX(-50%) rotate(-8deg);
     font-size: 34cqw; line-height: 1; z-index: 7; pointer-events: none;
   }
+  /* 顔のパーツごと一緒にバウンドさせるため、アニメーションは .char 全体にかける */
+  .char { position: absolute; inset: 0; animation: bounce 2.4s ease-in-out infinite; }
   .char-body {
     position: absolute; inset: 0; border-radius: 48% 48% 44% 44%;
     background: radial-gradient(circle at 35% 30%, #ffe08a, #ffb84d);
     box-shadow: inset -8px -10px 0 rgba(0,0,0,.06);
-    animation: bounce 2.4s ease-in-out infinite;
   }
   @keyframes bounce { 0%,100%{transform:translateY(0) scale(1);} 50%{transform:translateY(-4%) scale(1.02,.98);} }
   .eye {
@@ -123,7 +124,7 @@
   @keyframes pop-in { from { transform: scale(0); } to { transform: scale(1); } }
   .shower-btn {
     font-size: 14vw; width: 24vw; height: 24vw; max-width: 110px; max-height: 110px;
-    border: none; border-radius: 50%; background: #6ec6ff; box-shadow: 0 5px 0 #3d9be0;
+    border: none; border-radius: 50%; background: #ff9f43; box-shadow: 0 5px 0 #d97e20;
     margin-top: 10px; display: flex; align-items: center; justify-content: center;
     animation: pulse-btn 1s ease-in-out infinite;
   }
@@ -224,8 +225,9 @@
 
   .praise {
     position: fixed; top: 40%; left: 50%; transform: translate(-50%,-50%) scale(0);
-    font-size: 10vw; color: #ff7ab0; text-shadow: 2px 2px 0 #fff; z-index: 60;
-    pointer-events: none; transition: transform .25s;
+    font-size: 28vw; z-index: 60;
+    pointer-events: none; transition: transform .25s cubic-bezier(.34,1.56,.64,1);
+    filter: drop-shadow(3px 4px 0 rgba(0,0,0,.15));
   }
   .praise.show { transform: translate(-50%,-50%) scale(1); }
 </style>
@@ -355,7 +357,7 @@
   <button id="next-day-btn">つぎのひへ →</button>
 </div>
 
-<div class="praise" id="praise">💮 できた!</div>
+<div class="praise" id="praise">👍</div>
 
 <script>
 (() => {
@@ -508,19 +510,15 @@
 
   // ---------- できた!演出 ----------
   const praiseEl = document.getElementById('praise');
+  // 画面は👍絵文字のみ(テキストは改行位置が不自然になるためやめた)。褒め言葉は英語音声で
   const praiseWords = [
-    ['できた!', 'You did it!'],
-    ['すごい!', 'Great job!'],
-    ['えらいね!', 'Awesome!'],
-    ['やったね!', 'Wonderful!'],
-    ['かっこいい!', 'Fantastic!'],
-    ['がんばったね!', 'Well done!'],
+    'You did it!', 'Great job!', 'Awesome!',
+    'Wonderful!', 'Fantastic!', 'Well done!',
   ];
   function completeTask(name) {
     tasks[name] = true;
     sfx.stamp();
-    const [jp, en] = praiseWords[Math.floor(Math.random() * praiseWords.length)];
-    praiseEl.textContent = '💮 ' + jp;
+    const en = praiseWords[Math.floor(Math.random() * praiseWords.length)];
     praiseEl.classList.add('show');
     speakEn(en, true); // 直前のカウント("Three!"等)を消さずに続ける
     const cheer = document.querySelector('.screen.active .cheer-friend');
