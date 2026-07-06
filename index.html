@@ -158,9 +158,22 @@
   .zukan-slot {
     aspect-ratio: 1; background: #fff; border-radius: 18px; box-shadow: 0 3px 0 rgba(0,0,0,.1);
     display: flex; align-items: center; justify-content: center; font-size: 11vw;
+    border: none; font-family: inherit;
   }
   .zukan-slot.locked { filter: grayscale(1) opacity(.35); font-size: 8vw; }
+  .zukan-slot.hop { animation: friend-hop .5s; }
+  @keyframes friend-hop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.3) rotate(-8deg); }
+    70% { transform: scale(1.1) rotate(6deg); }
+    100% { transform: scale(1); }
+  }
   .zukan-count { font-size: 5vw; color: #7a6a58; margin-top: 12px; background: #fff; border-radius: 999px; padding: 6px 20px; }
+  .home-btn {
+    font-family: inherit; font-size: min(5.5vw, 24px); margin-top: 16px; padding: 12px 44px;
+    border: none; border-radius: 999px; background: #ff9f43; color: #fff; box-shadow: 0 5px 0 #d97e20;
+  }
+  .home-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #d97e20; }
 
   /* ===== おいわい ===== */
   #celebrate {
@@ -289,6 +302,7 @@
     <div class="guide">1にち がんばると おともだちが ふえるよ</div>
     <div class="zukan-grid" id="zukan-grid"></div>
     <div class="zukan-count" id="zukan-count"></div>
+    <button class="home-btn" id="zukan-home-btn">🏠 もどる</button>
   </div>
 </div>
 
@@ -573,7 +587,9 @@
         b.style.left = (t.clientX - zr.left - 10) + 'px';
         b.style.top = (t.clientY - zr.top - 10) + 'px';
         zone.appendChild(b);
-        setTimeout(() => b.remove(), 1800);
+        // 泡はシャワーで流すまで残す(増えすぎたら古いものから消す)
+        const bubbles = zone.querySelectorAll('.bubble');
+        if (bubbles.length > 50) bubbles[0].remove();
       }
       zone.querySelectorAll('.dirt:not(.clean)').forEach(d => {
         const r = d.getBoundingClientRect();
@@ -653,19 +669,33 @@
   }
 
   // ---------- 📖 ずかん ----------
+  const friendNames = {
+    '🐰': 'Bunny', '🐱': 'Cat', '🐶': 'Dog', '🐼': 'Panda',
+    '🐨': 'Koala', '🦁': 'Lion', '🐸': 'Frog', '🐧': 'Penguin',
+    '🦊': 'Fox', '🐹': 'Hamster', '🐻': 'Bear', '🐤': 'Chick',
+  };
   function renderZukan() {
     const grid = document.getElementById('zukan-grid');
     grid.innerHTML = '';
     allFriends.forEach(f => {
-      const slot = document.createElement('div');
+      const slot = document.createElement('button');
       const owned = friends.includes(f);
       slot.className = 'zukan-slot' + (owned ? '' : ' locked');
       slot.textContent = owned ? f : '❓';
+      slot.addEventListener('click', () => {
+        if (!owned) { sfx.tap(); return; }
+        slot.classList.remove('hop');
+        void slot.offsetWidth; // アニメーションを毎回リスタートさせる
+        slot.classList.add('hop');
+        sfx.pop();
+        speakEn(friendNames[f] + '!');
+      });
       grid.appendChild(slot);
     });
     document.getElementById('zukan-count').textContent =
       `おともだち ${friends.length} / ${allFriends.length}`;
   }
+  document.getElementById('zukan-home-btn').addEventListener('click', () => { sfx.tap(); goHome(); });
 
   // ---------- 🌙 ねんね ----------
   function setupSleep() {
