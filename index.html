@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#aee7ff">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>ぱくぱくフレンズ</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -12,16 +16,18 @@
     font-family: "Hiragino Maru Gothic ProN", "BIZ UDGothic", "Yu Gothic", sans-serif;
     background: linear-gradient(#aee7ff, #fdf6d8);
     user-select: none; -webkit-user-select: none;
+    height: 100dvh; /* URLバーを除いた実際の表示領域に合わせる */
   }
 
   .screen {
     position: absolute; inset: 0; display: none;
     flex-direction: column; align-items: center;
-    padding: max(12px, env(safe-area-inset-top)) 12px 12px;
+    padding: max(8px, env(safe-area-inset-top)) 12px max(10px, env(safe-area-inset-bottom));
+    overflow-y: auto;
   }
   .screen.active { display: flex; }
 
-  h1 { font-size: 7vw; color: #ff7ab0; text-shadow: 2px 2px 0 #fff; margin: 8px 0 2px; }
+  h1 { font-size: min(6.5vw, 30px); color: #ff7ab0; text-shadow: 2px 2px 0 #fff; margin: 2px 0; }
   .subtitle { font-size: 4vw; color: #7a6a58; margin-bottom: 6px; }
 
   /* ===== キャラクター ===== */
@@ -54,23 +60,24 @@
   .char.sleeping .mouth { height: 6%; width: 10%; border-radius: 50%; }
 
   /* ===== ホーム ===== */
+  #screen-home .char-wrap { width: 36vw; max-width: 160px; margin: 4px auto; }
   .stamp-card {
-    display: flex; gap: 10px; background: #fff; border: 3px dashed #ffb84d;
-    border-radius: 18px; padding: 10px 16px; margin: 4px 0 10px;
+    display: flex; gap: 8px; background: #fff; border: 3px dashed #ffb84d;
+    border-radius: 16px; padding: 7px 12px; margin: 2px 0 8px;
   }
-  .stamp { font-size: 9vw; max-font-size: 44px; filter: grayscale(1) opacity(.3); transition: all .3s; }
+  .stamp { font-size: min(7.5vw, 34px); filter: grayscale(1) opacity(.3); transition: all .3s; }
   .stamp.done { filter: none; transform: scale(1.15); }
-  .menu { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; max-width: 400px; margin-top: 6px; }
+  .menu { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; max-width: 420px; margin-top: 2px; }
   .menu button {
-    font-family: inherit; font-size: 5.5vw; padding: 5vw 2vw; border: none; border-radius: 22px;
-    background: #fff; box-shadow: 0 5px 0 rgba(0,0,0,.12); color: #5a4a38;
-    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    font-family: inherit; font-size: min(4.2vw, 18px); padding: 3.5vw 1vw; border: none; border-radius: 18px;
+    background: #fff; box-shadow: 0 4px 0 rgba(0,0,0,.12); color: #5a4a38;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
   }
-  .menu button .icon { font-size: 12vw; }
-  .menu button:active { transform: translateY(4px); box-shadow: 0 1px 0 rgba(0,0,0,.12); }
-  .menu button.done-badge { outline: 4px solid #7ed957; }
-  .menu button.done-badge::after { content: "✅ できた!"; font-size: 3.6vw; color: #4caf50; }
-  .day-label { font-size: 4.5vw; color: #7a6a58; background:#fff; border-radius: 999px; padding: 4px 18px; }
+  .menu button .icon { font-size: min(9vw, 40px); }
+  .menu button:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,.12); }
+  .menu button.done-badge { outline: 3px solid #7ed957; }
+  .menu button.done-badge::after { content: "✅"; font-size: min(3.6vw, 15px); }
+  .day-label { font-size: min(4.2vw, 18px); color: #7a6a58; background:#fff; border-radius: 999px; padding: 3px 16px; }
 
   /* ===== 共通:あそびエリア ===== */
   .play-area {
