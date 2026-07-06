@@ -1,7 +1,7 @@
 // ゲーム本体(状態・画面遷移・各お世話あそび)
 import {
   allFriends, friendNames, foodList, balloonColors, shapeList,
-  toyList, hatOf, praiseWords, guides,
+  toyList, hatOf, praiseWords, guides, helloWords,
 } from './data.js';
 import { tone, sfx, cry, speak, speakEn } from './audio.js';
 
@@ -28,7 +28,8 @@ import { tone, sfx, cry, speak, speakEn } from './audio.js';
       if (go === 'tidy') setupTidy();
       if (go === 'sleep') setupSleep();
       if (go === 'zukan') renderZukan();
-      if (go in tasks) addCheerFriend(go);
+      // おうえんおともだちは「ごはん」のみ(おすそわけで意味がある。他画面はユーザー判断で廃止)
+      if (go === 'meal') addCheerFriend(go);
     });
   });
   document.querySelectorAll('.back-btn').forEach(b =>
@@ -106,6 +107,16 @@ import { tone, sfx, cry, speak, speakEn } from './audio.js';
       wrap.appendChild(b);
     });
   }
+
+  // ---------- ホームのぱっくんタップ反応 ----------
+  const homeChar = document.getElementById('char-home');
+  homeChar.addEventListener('click', () => {
+    homeChar.classList.remove('hop'); void homeChar.offsetWidth; homeChar.classList.add('hop');
+    homeChar.classList.add('happy');
+    setTimeout(() => homeChar.classList.remove('happy'), 700);
+    sfx.pop();
+    speakEn(helloWords[Math.floor(Math.random() * helloWords.length)]);
+  });
 
   // ---------- できた!演出 ----------
   const praiseEl = document.getElementById('praise');
@@ -415,7 +426,7 @@ import { tone, sfx, cry, speak, speakEn } from './audio.js';
           g.dataset.hp--;
           g.style.transform = `scale(${.3 + g.dataset.hp * .12}) rotate(${Math.random() * 40 - 20}deg)`;
           if (g.dataset.hp <= 0) {
-            g.classList.add('dead'); sfx.pop(); alive--; cheerReact();
+            g.classList.add('dead'); sfx.pop(); alive--;
             if (alive === 0) {
               brush.style.display = 'none';
               speakEn('Clean teeth!'); // 褒め言葉はこの後queueで続く
@@ -469,7 +480,7 @@ import { tone, sfx, cry, speak, speakEn } from './audio.js';
         if (t.clientX > r.left - 16 && t.clientX < r.right + 16 &&
             t.clientY > r.top - 16 && t.clientY < r.bottom + 16) {
           if (--d.dataset.hp <= 0) {
-            d.classList.add('clean'); sfx.pop(); dirty--; cheerReact();
+            d.classList.add('clean'); sfx.pop(); dirty--;
             if (dirty === 0) {
               guide.textContent = 'シャワーで ながそう!';
               speakEn('Bubbles!');
@@ -532,7 +543,6 @@ import { tone, sfx, cry, speak, speakEn } from './audio.js';
         });
         setTimeout(() => {
           fly.remove(); sfx.pop();
-          cheerReact();
           box.classList.add('bounce');
           setTimeout(() => box.classList.remove('bounce'), 200);
           if (--left === 0) setTimeout(() => completeTask('tidy'), 500);
@@ -591,14 +601,6 @@ import { tone, sfx, cry, speak, speakEn } from './audio.js';
       if (scr.classList.contains('night')) return;
       scr.classList.add('night');
       char.classList.add('sleeping');
-      // おうえんおともだちも いっしょに ねんね
-      const cheer = scr.querySelector('.cheer-friend');
-      if (cheer) {
-        cheer.classList.add('asleep');
-        const z = document.createElement('span');
-        z.className = 'cheer-zzz'; z.textContent = '💤';
-        cheer.appendChild(z);
-      }
       document.getElementById('zzz').style.display = 'block';
       // textContentを空にするとボタンの高さが消えてキャラが持ち上がるので、visibilityで隠す
       sw.style.visibility = 'hidden';
@@ -628,12 +630,6 @@ import { tone, sfx, cry, speak, speakEn } from './audio.js';
           document.getElementById('zzz').style.display = 'none';
           char.classList.remove('sleeping');
           char.classList.add('happy');
-          if (cheer) {
-            // おともだちも おきて ぴょんとよろこぶ
-            cheer.classList.remove('asleep');
-            cheer.querySelector('.cheer-zzz')?.remove();
-            void cheer.offsetWidth; cheer.classList.add('hop');
-          }
           sw.classList.remove('rise'); void sw.offsetWidth; sw.classList.add('rise');
           guide.textContent = 'あさに なったよ! おはよう! ☀️';
           speakEn('Good morning!');

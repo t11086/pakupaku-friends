@@ -27,8 +27,12 @@ export const friendCries = {
 export const foodList = [
   ['🍎', 'Apple'], ['🍙', 'Rice ball'], ['🍌', 'Banana'],
   ['🥕', 'Carrot'], ['🍞', 'Bread'], ['🍓', 'Strawberry'],
-  ['🍇', 'Grapes'], ['🍅', 'Tomato'],
+  ['🍇', 'Grapes'], ['🍅', 'Tomato'], ['🍊', 'Orange'],
+  ['🥦', 'Broccoli'], ['🧀', 'Cheese'], ['🍉', 'Watermelon'],
 ];
+
+// ホームのぱっくんをタップしたときのあいさつ
+export const helloWords = ['Hello!', 'Hi!', "Let's play!", 'I love you!'];
 
 export const balloonColors = [
   ['#ff5a5a', 'Red'], ['#5aa0ff', 'Blue'], ['#ffd75a', 'Yellow'],

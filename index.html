@@ -209,12 +209,8 @@
     background: #fff; border-radius: 50% 50% 50% 0; padding: .12em .18em;
     box-shadow: 0 2px 0 rgba(0,0,0,.12); animation: pop-in .25s;
   }
-  /* ねんねでは おともだちも いっしょに ねる */
-  .cheer-friend.asleep {
-    animation: none; transform: rotate(12deg); filter: brightness(.8);
-    transition: transform .6s, filter .6s;
-  }
-  .cheer-zzz { position: absolute; top: -55%; left: 60%; font-size: .6em; animation: floatz 2s ease-in-out infinite; }
+  /* ホームのぱっくんタップ反応 */
+  .char.hop { animation: friend-hop .5s; }
 
   /* ===== ふうせんわり(ごほうび) ===== */
   #balloon-zone { position: relative; flex: 1; width: 100%; }
