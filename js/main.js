@@ -141,20 +141,39 @@ import { tone, sfx, cry, speak, speakEn } from './audio.js';
     const remaining = allFriends.filter(f => !friends.includes(f));
     const msg = document.getElementById('new-friend-msg');
     const icon = document.getElementById('celebrate-icon');
+    const parade = document.getElementById('friend-parade');
+    parade.innerHTML = '';
+    let confettiN = 24;
     if (remaining.length) {
       const newFriend = remaining[Math.floor(Math.random() * remaining.length)];
       friends.push(newFriend);
       localStorage.setItem('pakupaku-zukan', JSON.stringify(friends));
       icon.textContent = newFriend;
-      msg.textContent = 'あたらしい おともだちが きたよ! ずかんを みてみてね 📖';
+      if (friends.length === allFriends.length) {
+        // 🏆 12ひきコンプリートの特別なお祝い
+        msg.textContent = 'ずかん コンプリート! おともだち ぜんいん あつまったよ! 🏆';
+        speakEn('All friends together! Amazing!', true);
+        confettiN = 48;
+      } else {
+        msg.textContent = 'あたらしい おともだちが きたよ! ずかんを みてみてね 📖';
+      }
     } else {
       icon.textContent = '🎉';
       msg.textContent = 'おともだち ぜんいん あつまったよ! すごい!';
     }
+    // 全員そろっていたら、みんなでパレード
+    if (friends.length === allFriends.length) {
+      allFriends.forEach((f, i) => {
+        const s = document.createElement('span');
+        s.textContent = f;
+        s.style.animationDelay = (i * .1) + 's';
+        parade.appendChild(s);
+      });
+    }
     document.getElementById('celebrate').classList.add('active');
     sfx.fanfare();
     speak('きょうも ぜんぶ できたね! おめでとう!');
-    burstConfetti(24);
+    burstConfetti(confettiN);
   }
   function burstConfetti(n) {
     for (let i = 0; i < n; i++) {
@@ -167,13 +186,14 @@ import { tone, sfx, cry, speak, speakEn } from './audio.js';
       setTimeout(() => c.remove(), 4000);
     }
   }
-  // ごほうびは ふうせんわり → いろあわせ → かたちあわせ の3日ローテーション
+  // ごほうびは ふうせんわり → いろあわせ → かたちあわせ → かずあわせ の4日ローテーション
   document.getElementById('next-day-btn').addEventListener('click', () => {
     document.getElementById('celebrate').classList.remove('active');
     sfx.tap();
-    const kind = day % 3; // day1→🎈, day2→🎨, day3→⭐, …
+    const kind = day % 4; // day1→🎈, day2→🎨, day3→⭐, day4→🔢, …
     if (kind === 2) { show('colormatch'); setupColorMatch(); }
-    else if (kind === 0) { show('shapematch'); setupShapeMatch(); }
+    else if (kind === 3) { show('shapematch'); setupShapeMatch(); }
+    else if (kind === 0) { show('countmatch'); setupCountMatch(); }
     else { show('balloon'); setupBalloons(); }
   });
 
@@ -188,6 +208,7 @@ import { tone, sfx, cry, speak, speakEn } from './audio.js';
   document.getElementById('balloon-skip').addEventListener('click', () => { sfx.tap(); advanceDay(); });
   document.getElementById('colormatch-skip').addEventListener('click', () => { sfx.tap(); advanceDay(); });
   document.getElementById('shapematch-skip').addEventListener('click', () => { sfx.tap(); advanceDay(); });
+  document.getElementById('countmatch-skip').addEventListener('click', () => { sfx.tap(); advanceDay(); });
 
   // ---------- 🎁 あたらしいぼうしのお披露目 ----------
   function showHatReveal(hat) {
@@ -308,6 +329,56 @@ import { tone, sfx, cry, speak, speakEn } from './audio.js';
       });
       zone.appendChild(b);
     });
+  }
+
+  // ---------- 🔢 かずあわせ(ごほうびミニゲーム・かずの えいご) ----------
+  function setupCountMatch() {
+    const target = document.getElementById('count-target');
+    const choices = document.getElementById('count-choices');
+    const countEn = ['One', 'Two', 'Three', 'Four', 'Five'];
+    let round = 0;
+    function nextRound() {
+      round++;
+      const n = 1 + Math.floor(Math.random() * 5);
+      const [emoji] = foodList[Math.floor(Math.random() * foodList.length)];
+      target.textContent = emoji.repeat(n);
+      const question = 'How many?';
+      speakEn(question); // 出題も英語で
+      // 選択肢: 正解 + ちがう数字2つ(1〜5)
+      const opts = [n];
+      while (opts.length < 3) {
+        const c = 1 + Math.floor(Math.random() * 5);
+        if (!opts.includes(c)) opts.push(c);
+      }
+      opts.sort(() => Math.random() - .5);
+      choices.innerHTML = '';
+      opts.forEach(c => {
+        const b = document.createElement('button');
+        b.className = 'color-choice num';
+        // 数字が読めなくてもわかるように、数字+同じ数の●を並べる
+        const digit = document.createElement('span');
+        digit.className = 'num-digit'; digit.textContent = c;
+        const dots = document.createElement('span');
+        dots.className = 'num-dots'; dots.textContent = '●'.repeat(c);
+        b.append(digit, dots);
+        b.onclick = () => {
+          if (c === n) {
+            choices.querySelectorAll('button').forEach(x => x.onclick = null);
+            b.classList.add('correct');
+            sfx.pop(); speakEn(countEn[n - 1] + '!');
+            if (round === 3) { sfx.fanfare(); setTimeout(advanceDay, 1000); }
+            else setTimeout(nextRound, 800);
+          } else {
+            // まちがえてもペナルティなし。ぷるぷる揺れて、もういちど出題
+            sfx.tap();
+            b.classList.remove('wobble'); void b.offsetWidth; b.classList.add('wobble');
+            speakEn(question);
+          }
+        };
+        choices.appendChild(b);
+      });
+    }
+    nextRound();
   }
 
   // ---------- 🍚 ごはん ----------

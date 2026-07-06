@@ -248,6 +248,19 @@
     display: flex; align-items: center; justify-content: center;
   }
 
+  /* ===== かずあわせ(ごほうび) ===== */
+  .count-target { font-size: 12vw; line-height: 1.2; margin: 4vh 0; text-align: center; max-width: 90vw; letter-spacing: .5vw; }
+  .color-choice.num {
+    background: #fff; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 1vw;
+  }
+  .num-digit { font-size: 9vw; color: #5a4a38; font-weight: bold; line-height: 1; }
+  .num-dots { font-size: 2.6vw; color: #ff9f43; letter-spacing: .3vw; line-height: 1; }
+
+  /* ===== ずかんコンプリートのパレード ===== */
+  .parade { display: flex; flex-wrap: wrap; justify-content: center; gap: 1vw; font-size: 8vw; margin-top: 10px; }
+  .parade span { animation: bob 1s ease-in-out infinite; }
+
   /* ===== ぼうしプレゼント(お披露目) ===== */
   .reveal-gift {
     font-size: 34vw; background: none; border: none; margin-top: 4vh;
@@ -413,6 +426,16 @@
   </div>
 </div>
 
+<!-- かずあわせ(1にちクリアのごほうびD) -->
+<div id="screen-countmatch" class="screen">
+  <button class="skip-btn" id="countmatch-skip">つぎへ →</button>
+  <div class="play-area">
+    <div class="guide">ごほうび! いくつ あるか かぞえてね 🔢</div>
+    <div class="count-target" id="count-target"></div>
+    <div class="color-choices" id="count-choices"></div>
+  </div>
+</div>
+
 <!-- かたちあわせ(1にちクリアのごほうびC) -->
 <div id="screen-shapematch" class="screen">
   <button class="skip-btn" id="shapematch-skip">つぎへ →</button>
@@ -436,6 +459,7 @@
   <h2>きょうも ぜんぶ できたね!</h2>
   <div class="big" id="celebrate-icon">🎉</div>
   <div class="guide" id="new-friend-msg" style="margin-top:10px"></div>
+  <div class="parade" id="friend-parade"></div>
   <button id="next-day-btn">つぎのひへ →</button>
 </div>
 
