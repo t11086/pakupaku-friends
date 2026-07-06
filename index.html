@@ -31,7 +31,12 @@
   .subtitle { font-size: 4vw; color: #7a6a58; margin-bottom: 6px; }
 
   /* ===== キャラクター ===== */
-  .char-wrap { position: relative; width: 56vw; max-width: 260px; aspect-ratio: 1; margin: 10px auto; }
+  .char-wrap { position: relative; width: 56vw; max-width: 260px; aspect-ratio: 1; margin: 10px auto; container-type: inline-size; }
+  .char-hat {
+    position: absolute; top: -6%; left: 50%;
+    transform: translateX(-50%) rotate(-8deg);
+    font-size: 34cqw; line-height: 1; z-index: 7; pointer-events: none;
+  }
   .char-body {
     position: absolute; inset: 0; border-radius: 48% 48% 44% 44%;
     background: radial-gradient(circle at 35% 30%, #ffe08a, #ffb84d);
@@ -183,6 +188,14 @@
   }
   @keyframes bob { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-8px);} }
   .home-friend.hop { animation: friend-hop .5s; }
+
+  /* ===== おうえんに くる おともだち(あそび画面) ===== */
+  .cheer-friend {
+    position: absolute; left: 3%; bottom: 3%; z-index: 6;
+    font-size: min(10vw, 44px); background: none; border: none;
+    animation: bob 2.2s ease-in-out infinite;
+  }
+  .cheer-friend.hop { animation: friend-hop .5s; }
 
   /* ===== ふうせんわり(ごほうび) ===== */
   #balloon-zone { position: relative; flex: 1; width: 100%; }
@@ -386,9 +399,10 @@
     pickEnVoice();
     speechSynthesis.onvoiceschanged = pickEnVoice;
   }
-  function speakEn(text) {
+  // queue=true なら前の読み上げを消さずに続けて話す(名前→カウント等)
+  function speakEn(text, queue) {
     if (!('speechSynthesis' in window)) return;
-    speechSynthesis.cancel();
+    if (!queue) speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = 'en-US';
     if (enVoice) u.voice = enVoice;
@@ -419,6 +433,7 @@
       if (go === 'tidy') setupTidy();
       if (go === 'sleep') setupSleep();
       if (go === 'zukan') renderZukan();
+      if (go in tasks) addCheerFriend(go);
     });
   });
   document.querySelectorAll('.back-btn').forEach(b =>
@@ -436,6 +451,39 @@
     document.querySelectorAll('.menu button').forEach(b =>
       b.classList.toggle('done-badge', tasks[b.dataset.go]));
     renderHomeFriends();
+    applyHats();
+  }
+
+  // ---------- 🎀 ぼうし(にっすうで きせかえが ふえる) ----------
+  const hatLevels = [[10, '👑'], [7, '🎩'], [5, '🧢'], [3, '🎀']];
+  function applyHats() {
+    const hat = (hatLevels.find(([d]) => day >= d) || [0, ''])[1];
+    document.querySelectorAll('.char').forEach(c => {
+      let el = c.querySelector('.char-hat');
+      if (!el) {
+        el = document.createElement('div');
+        el.className = 'char-hat';
+        c.appendChild(el);
+      }
+      el.textContent = hat;
+    });
+  }
+
+  // ---------- 🐰 おともだちが おうえんに くる ----------
+  function addCheerFriend(screenName) {
+    const area = document.querySelector('#screen-' + screenName + ' .play-area');
+    area.querySelectorAll('.cheer-friend').forEach(f => f.remove());
+    if (!friends.length) return;
+    const f = friends[Math.floor(Math.random() * friends.length)];
+    const b = document.createElement('button');
+    b.className = 'cheer-friend'; b.textContent = f;
+    b.addEventListener('click', () => {
+      b.classList.remove('hop');
+      void b.offsetWidth;
+      b.classList.add('hop');
+      sfx.pop(); speakEn(friendNames[f] + '!');
+    });
+    area.appendChild(b);
   }
 
   // ずかんで なかまになった おともだちが ホームにあそびにくる
@@ -474,7 +522,13 @@
     const [jp, en] = praiseWords[Math.floor(Math.random() * praiseWords.length)];
     praiseEl.textContent = '💮 ' + jp;
     praiseEl.classList.add('show');
-    speakEn(en);
+    speakEn(en, true); // 直前のカウント("Three!"等)を消さずに続ける
+    const cheer = document.querySelector('.screen.active .cheer-friend');
+    if (cheer) {
+      cheer.classList.remove('hop');
+      void cheer.offsetWidth;
+      cheer.classList.add('hop');
+    }
     setTimeout(() => {
       praiseEl.classList.remove('show');
       if (Object.values(tasks).every(Boolean)) celebrate();
@@ -574,6 +628,7 @@
         flyToMouth(btn, f, () => {
           eaten++;
           sfx.eat();
+          speakEn(['One!', 'Two!', 'Three!'][eaten - 1], true); // たべた数を英語でカウント
           const char = document.getElementById('char-meal');
           char.classList.add('happy');
           setTimeout(() => char.classList.remove('happy'), 500);
