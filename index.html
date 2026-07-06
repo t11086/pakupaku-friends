@@ -125,6 +125,26 @@
   .star { position: absolute; font-size: 5vw; animation: twinkle 1.6s ease-in-out infinite; }
   @keyframes twinkle { 0%,100%{opacity:.3;} 50%{opacity:1;} }
 
+  /* ===== おかたづけ ===== */
+  .toy { position: absolute; font-size: 11vw; background: none; border: none; z-index: 5; transition: transform .1s; }
+  .toy:active { transform: scale(1.2); }
+  .toy.stored { visibility: hidden; }
+  .toy-box { font-size: 18vw; margin-top: 6px; transition: transform .2s; }
+  .toy-box.bounce { transform: scale(1.2); }
+  .flying-toy { position: fixed; font-size: 11vw; z-index: 40; pointer-events: none; transition: all .5s ease-in; }
+
+  /* ===== ずかん ===== */
+  .zukan-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+    width: 100%; max-width: 400px; margin-top: 14px;
+  }
+  .zukan-slot {
+    aspect-ratio: 1; background: #fff; border-radius: 18px; box-shadow: 0 3px 0 rgba(0,0,0,.1);
+    display: flex; align-items: center; justify-content: center; font-size: 11vw;
+  }
+  .zukan-slot.locked { filter: grayscale(1) opacity(.35); font-size: 8vw; }
+  .zukan-count { font-size: 5vw; color: #7a6a58; margin-top: 12px; background: #fff; border-radius: 999px; padding: 6px 20px; }
+
   /* ===== おいわい ===== */
   #celebrate {
     position: absolute; inset: 0; z-index: 100; display: none;
@@ -162,13 +182,16 @@
     <span class="stamp" data-task="meal">🍚</span>
     <span class="stamp" data-task="teeth">🪥</span>
     <span class="stamp" data-task="bath">🛁</span>
+    <span class="stamp" data-task="tidy">🧸</span>
     <span class="stamp" data-task="sleep">🌙</span>
   </div>
   <div class="menu">
     <button data-go="meal"><span class="icon">🍚</span>ごはん</button>
     <button data-go="teeth"><span class="icon">🪥</span>はみがき</button>
     <button data-go="bath"><span class="icon">🛁</span>おふろ</button>
+    <button data-go="tidy"><span class="icon">🧸</span>おかたづけ</button>
     <button data-go="sleep"><span class="icon">🌙</span>ねんね</button>
+    <button data-go="zukan" style="background:#fff3f8"><span class="icon">📖</span>ずかん</button>
   </div>
 </div>
 
@@ -231,10 +254,32 @@
   </div>
 </div>
 
+<!-- おかたづけ -->
+<div id="screen-tidy" class="screen">
+  <button class="back-btn">← もどる</button>
+  <div class="play-area">
+    <div class="guide">おもちゃを タッチして はこに おかたづけしよう!</div>
+    <div class="char-wrap bath-zone" id="tidy-zone" style="width:80vw;max-width:380px;flex:1;max-height:50vh"></div>
+    <div class="toy-box" id="toy-box">🧺</div>
+  </div>
+</div>
+
+<!-- ずかん -->
+<div id="screen-zukan" class="screen">
+  <button class="back-btn">← もどる</button>
+  <div class="play-area">
+    <h1 style="font-size:6vw">おともだち ずかん</h1>
+    <div class="guide">1にち がんばると おともだちが ふえるよ</div>
+    <div class="zukan-grid" id="zukan-grid"></div>
+    <div class="zukan-count" id="zukan-count"></div>
+  </div>
+</div>
+
 <!-- 1にちクリア -->
 <div id="celebrate" class="screen">
   <h2>きょうも ぜんぶ できたね!</h2>
-  <div class="big">🎉</div>
+  <div class="big" id="celebrate-icon">🎉</div>
+  <div class="guide" id="new-friend-msg" style="margin-top:10px"></div>
   <button id="next-day-btn">つぎのひへ →</button>
 </div>
 
@@ -243,8 +288,10 @@
 <script>
 (() => {
   // ---------- 状態 ----------
-  const tasks = { meal: false, teeth: false, bath: false, sleep: false };
+  const tasks = { meal: false, teeth: false, bath: false, tidy: false, sleep: false };
   let day = Number(localStorage.getItem('pakupaku-day') || 1);
+  const allFriends = ['🐰', '🐱', '🐶', '🐼', '🐨', '🦁', '🐸', '🐧', '🦊', '🐹', '🐻', '🐤'];
+  let friends = JSON.parse(localStorage.getItem('pakupaku-zukan') || '[]');
 
   // ---------- サウンド(WebAudio) ----------
   let ctx;
@@ -280,6 +327,7 @@
     meal: 'たべものを タッチして たべさせてね',
     teeth: 'はを ゆびで こすって ばいきんを やっつけよう',
     bath: 'からだを なでなでして あわあわに してね',
+    tidy: 'おもちゃを タッチして はこに おかたづけしよう',
     sleep: 'でんきを けして ねんねさせてあげよう',
   };
   document.querySelectorAll('.menu button').forEach(btn => {
@@ -289,7 +337,9 @@
       if (go === 'meal') setupMeal();
       if (go === 'teeth') setupTeeth();
       if (go === 'bath') setupBath();
+      if (go === 'tidy') setupTidy();
       if (go === 'sleep') setupSleep();
+      if (go === 'zukan') renderZukan();
     });
   });
   document.querySelectorAll('.back-btn').forEach(b =>
@@ -327,6 +377,20 @@
 
   function celebrate() {
     show('home');
+    // ごほうび:まだ図鑑にいないおともだちを1匹なかまに
+    const remaining = allFriends.filter(f => !friends.includes(f));
+    const msg = document.getElementById('new-friend-msg');
+    const icon = document.getElementById('celebrate-icon');
+    if (remaining.length) {
+      const newFriend = remaining[Math.floor(Math.random() * remaining.length)];
+      friends.push(newFriend);
+      localStorage.setItem('pakupaku-zukan', JSON.stringify(friends));
+      icon.textContent = newFriend;
+      msg.textContent = 'あたらしい おともだちが きたよ! ずかんを みてみてね 📖';
+    } else {
+      icon.textContent = '🎉';
+      msg.textContent = 'おともだち ぜんいん あつまったよ! すごい!';
+    }
     document.getElementById('celebrate').classList.add('active');
     sfx.fanfare();
     speak('きょうも ぜんぶ できたね! おめでとう!');
@@ -395,12 +459,13 @@
   function setupTeeth() {
     const mouth = document.getElementById('teeth-mouth');
     mouth.querySelectorAll('.germ').forEach(g => g.remove());
-    let alive = 4;
-    for (let i = 0; i < 4; i++) {
+    let alive = 3 + Math.floor(Math.random() * 3); // 3〜5ひき
+    const count = alive;
+    for (let i = 0; i < count; i++) {
       const g = document.createElement('div');
       g.className = 'germ'; g.textContent = '👾';
       g.dataset.hp = 6;
-      g.style.left = (8 + i * 23 + Math.random() * 6) + '%';
+      g.style.left = (6 + i * (78 / count) + Math.random() * 6) + '%';
       g.style.top = (8 + Math.random() * 20) + '%';
       mouth.appendChild(g);
     }
@@ -501,6 +566,61 @@
       speak('ぴかぴかに なったね');
       setTimeout(() => completeTask('bath'), 1200);
     };
+  }
+
+  // ---------- 🧸 おかたづけ ----------
+  const toyEmojis = ['🧸', '🚗', '⚽', '🪀', '🦖', '🚂', '🎈', '🥁'];
+  function setupTidy() {
+    const zone = document.getElementById('tidy-zone');
+    const box = document.getElementById('toy-box');
+    zone.innerHTML = '';
+    let left = 4;
+    const picks = [...toyEmojis].sort(() => Math.random() - .5).slice(0, 4);
+    const spots = [[8, 15], [60, 10], [20, 60], [65, 62]];
+    picks.forEach((t, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'toy'; btn.textContent = t;
+      btn.style.left = (spots[i][0] + Math.random() * 10) + '%';
+      btn.style.top = (spots[i][1] + Math.random() * 10) + '%';
+      btn.addEventListener('click', () => {
+        if (btn.classList.contains('stored')) return;
+        btn.classList.add('stored');
+        // おもちゃが箱まで飛んでいくアニメーション
+        const fly = document.createElement('div');
+        fly.className = 'flying-toy'; fly.textContent = t;
+        const from = btn.getBoundingClientRect();
+        const to = box.getBoundingClientRect();
+        fly.style.left = from.left + 'px'; fly.style.top = from.top + 'px';
+        document.body.appendChild(fly);
+        requestAnimationFrame(() => {
+          fly.style.left = (to.left + to.width / 4) + 'px';
+          fly.style.top = to.top + 'px';
+          fly.style.transform = 'scale(.3)';
+        });
+        setTimeout(() => {
+          fly.remove(); sfx.pop();
+          box.classList.add('bounce');
+          setTimeout(() => box.classList.remove('bounce'), 200);
+          if (--left === 0 && !tasks.tidy) setTimeout(() => completeTask('tidy'), 500);
+        }, 520);
+      });
+      zone.appendChild(btn);
+    });
+  }
+
+  // ---------- 📖 ずかん ----------
+  function renderZukan() {
+    const grid = document.getElementById('zukan-grid');
+    grid.innerHTML = '';
+    allFriends.forEach(f => {
+      const slot = document.createElement('div');
+      const owned = friends.includes(f);
+      slot.className = 'zukan-slot' + (owned ? '' : ' locked');
+      slot.textContent = owned ? f : '❓';
+      grid.appendChild(slot);
+    });
+    document.getElementById('zukan-count').textContent =
+      `おともだち ${friends.length} / ${allFriends.length}`;
   }
 
   // ---------- 🌙 ねんね ----------
