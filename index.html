@@ -515,7 +515,7 @@
   }
 
   // ---------- 🎀 ぼうし(にっすうで きせかえが ふえる) ----------
-  const hatLevels = [[10, '👑'], [7, '🎩'], [5, '🧢'], [3, '🎀']];
+  const hatLevels = [[20, '🌈'], [16, '🌟'], [13, '🎓'], [10, '👑'], [7, '🎩'], [5, '🧢'], [3, '🎀']];
   const hatOf = d => (hatLevels.find(([n]) => d >= n) || [0, ''])[1];
   function applyHats() {
     const hat = hatOf(day);
@@ -530,6 +530,26 @@
     });
   }
 
+  // ---------- 🔊 おともだちごとの鳴き声(チップチューン風) ----------
+  const friendCries = {
+    '🐰': [[700, .07, 0], [1000, .09, .08]],
+    '🐱': [[900, .18, 0], [650, .22, .14]],
+    '🐶': [[320, .09, 0, 'square'], [320, .09, .14, 'square']],
+    '🐼': [[400, .12, 0], [500, .12, .13]],
+    '🐨': [[350, .15, 0], [300, .15, .16]],
+    '🦁': [[220, .3, 0, 'sawtooth', .15]],
+    '🐸': [[250, .12, 0, 'square', .18], [210, .14, .13, 'square', .18]],
+    '🐧': [[1000, .06, 0], [1200, .06, .08], [1000, .06, .16]],
+    '🦊': [[850, .1, 0], [1100, .12, .1]],
+    '🐹': [[1100, .05, 0], [1300, .05, .06], [1100, .05, .12]],
+    '🐻': [[260, .2, 0, 'sawtooth', .12], [220, .22, .2, 'sawtooth', .12]],
+    '🐤': [[1300, .07, 0], [1500, .07, .09]],
+  };
+  function cry(f) {
+    (friendCries[f] || [[600, .1, 0]]).forEach(([fr, d, dl, type, vol]) =>
+      tone(fr, d, dl, type || 'triangle', vol ?? .2));
+  }
+
   // ---------- 🐰 おともだちが おうえんに くる ----------
   function addCheerFriend(screenName) {
     const area = document.querySelector('#screen-' + screenName + ' .play-area');
@@ -542,7 +562,7 @@
       b.classList.remove('hop');
       void b.offsetWidth;
       b.classList.add('hop');
-      sfx.pop(); speakEn(friendNames[f] + '!');
+      cry(f); speakEn(friendNames[f] + '!');
     });
     area.appendChild(b);
   }
@@ -561,7 +581,7 @@
       b.addEventListener('click', () => {
         b.classList.add('hop');
         setTimeout(() => b.classList.remove('hop'), 550);
-        sfx.pop(); speakEn(friendNames[f] + '!');
+        cry(f); speakEn(friendNames[f] + '!');
       });
       wrap.appendChild(b);
     });
@@ -849,7 +869,7 @@
             g.classList.add('dead'); sfx.pop(); alive--;
             if (alive === 0) {
               brush.style.display = 'none';
-              speak('はが ぴかぴかに なったよ');
+              speakEn('Clean teeth!'); // 褒め言葉はこの後queueで続く
               setTimeout(() => completeTask('teeth'), 600);
             }
           }
@@ -903,7 +923,7 @@
             d.classList.add('clean'); sfx.pop(); dirty--;
             if (dirty === 0) {
               guide.textContent = 'シャワーで ながそう!';
-              speak('シャワーで ながそう!');
+              speakEn('Bubbles!');
               showerBtn.style.visibility = 'visible';
             }
           }
@@ -927,7 +947,7 @@
       }
       [400, 500, 600].forEach((f, i) => tone(f, .3, i * .1, 'sine', .12));
       zone.querySelectorAll('.bubble').forEach(b => b.remove());
-      speak('ぴかぴかに なったね');
+      speakEn('Splash, splash!');
       setTimeout(() => completeTask('bath'), 1200);
     };
   }
@@ -991,7 +1011,7 @@
         slot.classList.remove('hop');
         void slot.offsetWidth; // アニメーションを毎回リスタートさせる
         slot.classList.add('hop');
-        sfx.pop();
+        cry(f);
         speakEn(friendNames[f] + '!');
       });
       grid.appendChild(slot);
