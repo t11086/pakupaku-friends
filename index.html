@@ -84,11 +84,12 @@
     position: relative; width: 100%; max-width: 420px; flex: 1;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
   }
-  .back-btn {
+  .back-btn, .skip-btn {
     position: absolute; top: max(10px, env(safe-area-inset-top)); left: 12px; z-index: 30;
     font-family: inherit; font-size: 5vw; border: none; border-radius: 999px;
     background: #fff; padding: 8px 16px; box-shadow: 0 3px 0 rgba(0,0,0,.15); color: #7a6a58;
   }
+  .skip-btn { left: auto; right: 12px; }
   .guide { font-size: 4.8vw; color: #5a4a38; background: rgba(255,255,255,.85); border-radius: 14px; padding: 8px 14px; text-align: center; }
 
   /* ===== ごはん ===== */
@@ -174,6 +175,24 @@
     border: none; border-radius: 999px; background: #ff9f43; color: #fff; box-shadow: 0 5px 0 #d97e20;
   }
   .home-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #d97e20; }
+
+  /* ===== ホームにあそびにくるおともだち ===== */
+  .home-friend {
+    position: absolute; font-size: min(8vw, 36px); background: none; border: none; z-index: 6;
+    animation: bob 2.2s ease-in-out infinite;
+  }
+  @keyframes bob { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-8px);} }
+  .home-friend.hop { animation: friend-hop .5s; }
+
+  /* ===== ふうせんわり(ごほうび) ===== */
+  #balloon-zone { position: relative; flex: 1; width: 100%; }
+  .balloon {
+    position: absolute; width: 17vw; height: 21vw; max-width: 84px; max-height: 104px;
+    border: none; border-radius: 50% 50% 47% 47%;
+    animation: bob 2.6s ease-in-out infinite;
+  }
+  .balloon::after { content: ""; position: absolute; left: 50%; top: 99%; width: 2px; height: 9vw; background: #9c8a76; }
+  .balloon.popped { transition: transform .18s, opacity .18s; transform: scale(1.7); opacity: 0; pointer-events: none; }
 
   /* ===== おいわい ===== */
   #celebrate {
@@ -306,6 +325,15 @@
   </div>
 </div>
 
+<!-- ふうせんわり(1にちクリアのごほうび) -->
+<div id="screen-balloon" class="screen">
+  <button class="skip-btn" id="balloon-skip">つぎへ →</button>
+  <div class="play-area">
+    <div class="guide">ごほうび! ふうせんを ぜんぶ わってね 🎈</div>
+    <div id="balloon-zone"></div>
+  </div>
+</div>
+
 <!-- 1にちクリア -->
 <div id="celebrate" class="screen">
   <h2>きょうも ぜんぶ できたね!</h2>
@@ -407,6 +435,27 @@
       s.classList.toggle('done', tasks[s.dataset.task]));
     document.querySelectorAll('.menu button').forEach(b =>
       b.classList.toggle('done-badge', tasks[b.dataset.go]));
+    renderHomeFriends();
+  }
+
+  // ずかんで なかまになった おともだちが ホームにあそびにくる
+  function renderHomeFriends() {
+    const wrap = document.querySelector('#screen-home .char-wrap');
+    wrap.querySelectorAll('.home-friend').forEach(f => f.remove());
+    const picks = [...friends].sort(() => Math.random() - .5).slice(0, 4);
+    const spots = [['-26%', '6%'], ['104%', '2%'], ['-30%', '56%'], ['108%', '52%']];
+    picks.forEach((f, i) => {
+      const b = document.createElement('button');
+      b.className = 'home-friend'; b.textContent = f;
+      b.style.left = spots[i][0]; b.style.top = spots[i][1];
+      b.style.animationDelay = (i * .4) + 's';
+      b.addEventListener('click', () => {
+        b.classList.add('hop');
+        setTimeout(() => b.classList.remove('hop'), 550);
+        sfx.pop(); speakEn(friendNames[f] + '!');
+      });
+      wrap.appendChild(b);
+    });
   }
 
   // ---------- できた!演出 ----------
@@ -416,6 +465,8 @@
     ['すごい!', 'Great job!'],
     ['えらいね!', 'Awesome!'],
     ['やったね!', 'Wonderful!'],
+    ['かっこいい!', 'Fantastic!'],
+    ['がんばったね!', 'Well done!'],
   ];
   function completeTask(name) {
     tasks[name] = true;
@@ -461,17 +512,52 @@
     }
   }
   document.getElementById('next-day-btn').addEventListener('click', () => {
+    document.getElementById('celebrate').classList.remove('active');
+    sfx.tap(); show('balloon'); setupBalloons();
+  });
+
+  function advanceDay() {
     day++; localStorage.setItem('pakupaku-day', day);
     Object.keys(tasks).forEach(k => tasks[k] = false);
-    document.getElementById('celebrate').classList.remove('active');
-    sfx.tap(); goHome();
-    speak('あたらしい あさが きたよ! きょうも いっぱい あそぼうね');
-  });
+    goHome();
+  }
+  document.getElementById('balloon-skip').addEventListener('click', () => { sfx.tap(); advanceDay(); });
+
+  // ---------- 🎈 ふうせんわり(ごほうびミニゲーム・いろの えいご) ----------
+  const balloonColors = [
+    ['#ff5a5a', 'Red'], ['#5aa0ff', 'Blue'], ['#ffd75a', 'Yellow'],
+    ['#7ed957', 'Green'], ['#b07aff', 'Purple'], ['#ff8ac2', 'Pink'],
+  ];
+  function setupBalloons() {
+    const zone = document.getElementById('balloon-zone');
+    zone.innerHTML = '';
+    let left = balloonColors.length;
+    const spots = [[8, 4], [62, 2], [34, 24], [5, 48], [64, 44], [34, 66]];
+    [...balloonColors].sort(() => Math.random() - .5).forEach(([c, name], i) => {
+      const b = document.createElement('button');
+      b.className = 'balloon';
+      b.style.background = `radial-gradient(circle at 35% 30%, rgba(255,255,255,.6), transparent 55%), ${c}`;
+      b.style.left = (spots[i][0] + Math.random() * 8) + '%';
+      b.style.top = (spots[i][1] + Math.random() * 5) + '%';
+      b.style.animationDelay = (Math.random() * 1.5) + 's';
+      b.addEventListener('click', () => {
+        if (b.classList.contains('popped')) return;
+        b.classList.add('popped');
+        sfx.pop(); speakEn(name + '!');
+        if (--left === 0) {
+          sfx.fanfare();
+          setTimeout(advanceDay, 1000);
+        }
+      });
+      zone.appendChild(b);
+    });
+  }
 
   // ---------- 🍚 ごはん ----------
   const foodList = [
     ['🍎', 'Apple'], ['🍙', 'Rice ball'], ['🍌', 'Banana'],
     ['🥕', 'Carrot'], ['🍞', 'Bread'], ['🍓', 'Strawberry'],
+    ['🍇', 'Grapes'], ['🍅', 'Tomato'],
   ];
   function setupMeal() {
     const tray = document.getElementById('food-tray');
