@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+  /* index.html のキャラクターCSSをそのまま転記(アニメーションのみ除去) */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 512px; height: 512px; overflow: hidden; }
+  body { background: linear-gradient(#aee7ff, #fdf6d8); }
+  .char-wrap { position: relative; width: 340px; height: 340px; margin: 86px auto 0; }
+  .char { position: absolute; inset: 0; }
+  .char-body {
+    position: absolute; inset: 0; border-radius: 48% 48% 44% 44%;
+    background: radial-gradient(circle at 35% 30%, #ffe08a, #ffb84d);
+    box-shadow: inset -8px -10px 0 rgba(0,0,0,.06);
+  }
+  .eye {
+    position: absolute; top: 32%; width: 11%; height: 15%;
+    background: #4a3b2a; border-radius: 50%;
+  }
+  .eye::after { content:""; position:absolute; top:15%; left:20%; width:35%; height:35%; background:#fff; border-radius:50%; }
+  .eye.l { left: 26%; } .eye.r { right: 26%; }
+  .cheek { position: absolute; top: 50%; width: 13%; height: 8%; background: #ffb3c1; border-radius: 50%; opacity:.8; }
+  .cheek.l { left: 14%; } .cheek.r { right: 14%; }
+  .mouth {
+    position: absolute; top: 55%; left: 50%; transform: translateX(-50%);
+    width: 22%; height: 12%; background: #a8442f; border-radius: 0 0 50% 50%;
+    overflow: hidden;
+  }
+  .mouth::after { content:""; position:absolute; bottom:-30%; left:15%; width:70%; height:60%; background:#ff8c7a; border-radius:50%; }
+</style></head><body>
+<div class="char-wrap"><div class="char">
+  <div class="char-body"></div><div class="eye l"></div><div class="eye r"></div>
+  <div class="cheek l"></div><div class="cheek r"></div><div class="mouth"></div>
+</div></div>
+</body></html>

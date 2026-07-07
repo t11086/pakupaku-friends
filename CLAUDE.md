@@ -9,6 +9,8 @@
 - `js/main.js` — ゲーム本体(状態・画面遷移・各お世話あそび・ごほうび)
 - `js/data.js` — 定数データ(おともだち・食べ物・色・形・帽子・褒め言葉・鳴き声データ)
 - `js/audio.js` — WebAudio効果音(`tone`/`sfx`/`cry`)と英語読み上げ(`speakEn`)
+- `icon-source.html` — PWAアイコンの元(index.htmlのキャラCSSを転記したもの)。**アプリ内のぱっくんの顔を変えたらここも同期し、以下で再生成**:
+  `chrome --headless=old --window-size=512,512 --screenshot=icon-512.png file://.../icon-source.html` → `sips -z 192 192 icon-512.png --out icon-192.png`
 
 ## デプロイ
 
