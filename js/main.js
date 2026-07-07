@@ -1,6 +1,6 @@
 // ゲーム本体(状態・画面遷移・各お世話あそび)
 import {
-  allFriends, friendNames, foodList, balloonColors, shapeList,
+  allFriends, seaFriends, friendNames, foodList, balloonColors, shapeList,
   toyList, hatOf, praiseWords, guides, helloWords,
 } from './data.js';
 import { tone, sfx, cry, speak, speakEn } from './audio.js';
@@ -138,7 +138,10 @@ import { tone, sfx, cry, speak, speakEn } from './audio.js';
   function celebrate() {
     show('home');
     // ごほうび:まだ図鑑にいないおともだちを1匹なかまに
-    const remaining = allFriends.filter(f => !friends.includes(f));
+    // まずりくのおともだち、コンプリート後はうみのおともだちが来る
+    const landRemaining = allFriends.filter(f => !friends.includes(f));
+    const seaRemaining = seaFriends.filter(f => !friends.includes(f));
+    const remaining = landRemaining.length ? landRemaining : seaRemaining;
     const msg = document.getElementById('new-friend-msg');
     const icon = document.getElementById('celebrate-icon');
     const parade = document.getElementById('friend-parade');
@@ -150,9 +153,14 @@ import { tone, sfx, cry, speak, speakEn } from './audio.js';
       localStorage.setItem('pakupaku-zukan', JSON.stringify(friends));
       icon.textContent = newFriend;
       if (friends.length === allFriends.length) {
-        // 🏆 12ひきコンプリートの特別なお祝い
-        msg.textContent = 'ずかん コンプリート! おともだち ぜんいん あつまったよ! 🏆';
+        // 🏆 りく12ひきコンプリートの特別なお祝い
+        msg.textContent = 'ずかん コンプリート! つぎは うみの おともだちが くるよ! 🏆🌊';
         speakEn('All friends together! Amazing!', true);
+        confettiN = 48;
+      } else if (friends.length === allFriends.length + seaFriends.length) {
+        // 🏆 うみのおともだちも全員そろった
+        msg.textContent = 'うみの おともだちも ぜんいん あつまったよ! すごい! 🏆🌊';
+        speakEn('All sea friends together! Amazing!', true);
         confettiN = 48;
       } else {
         msg.textContent = 'あたらしい おともだちが きたよ! ずかんを みてみてね 📖';
@@ -161,9 +169,9 @@ import { tone, sfx, cry, speak, speakEn } from './audio.js';
       icon.textContent = '🎉';
       msg.textContent = 'おともだち ぜんいん あつまったよ! すごい!';
     }
-    // 全員そろっていたら、みんなでパレード
-    if (friends.length === allFriends.length) {
-      allFriends.forEach((f, i) => {
+    // りくのおともだちがそろったら、あつまったみんなでパレード
+    if (friends.length >= allFriends.length) {
+      friends.forEach((f, i) => {
         const s = document.createElement('span');
         s.textContent = f;
         s.style.animationDelay = (i * .1) + 's';
@@ -309,9 +317,11 @@ import { tone, sfx, cry, speak, speakEn } from './audio.js';
   function setupBalloons() {
     const zone = document.getElementById('balloon-zone');
     zone.innerHTML = '';
-    let left = balloonColors.length;
-    const spots = [[8, 4], [62, 2], [34, 24], [5, 48], [64, 44], [34, 66]];
-    [...balloonColors].sort(() => Math.random() - .5).forEach(([c, name], i) => {
+    // 日数がすすむと ふうせんが少しずつ増える(6→7→8、最大8)
+    const count = Math.min(8, 6 + Math.floor((day - 1) / 4));
+    let left = count;
+    const spots = [[8, 4], [62, 2], [34, 24], [5, 48], [64, 44], [34, 66], [8, 70], [62, 66]];
+    [...balloonColors].sort(() => Math.random() - .5).slice(0, count).forEach(([c, name], i) => {
       const b = document.createElement('button');
       b.className = 'balloon';
       b.style.background = `radial-gradient(circle at 35% 30%, rgba(255,255,255,.6), transparent 55%), ${c}`;
@@ -627,7 +637,10 @@ import { tone, sfx, cry, speak, speakEn } from './audio.js';
   function renderZukan() {
     const grid = document.getElementById('zukan-grid');
     grid.innerHTML = '';
-    allFriends.forEach(f => {
+    // りく12ひきコンプリート後は、うみのおともだちの枠も見えるようになる
+    const landComplete = allFriends.every(f => friends.includes(f));
+    const roster = landComplete ? [...allFriends, ...seaFriends] : allFriends;
+    roster.forEach(f => {
       const slot = document.createElement('button');
       const owned = friends.includes(f);
       slot.className = 'zukan-slot' + (owned ? '' : ' locked');
@@ -650,7 +663,7 @@ import { tone, sfx, cry, speak, speakEn } from './audio.js';
       grid.appendChild(slot);
     });
     document.getElementById('zukan-count').textContent =
-      `おともだち ${friends.length} / ${allFriends.length}`;
+      `おともだち ${friends.length} / ${roster.length}`;
   }
   document.getElementById('zukan-home-btn').addEventListener('click', () => { sfx.tap(); goHome(); });
 

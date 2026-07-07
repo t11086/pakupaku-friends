@@ -2,10 +2,16 @@
 
 export const allFriends = ['🐰', '🐱', '🐶', '🐼', '🐨', '🦁', '🐸', '🐧', '🦊', '🐹', '🐻', '🐤'];
 
+// 12匹コンプリート後にやってくる第2弾: うみのおともだち
+export const seaFriends = ['🐬', '🐳', '🐙', '🦀', '🐢', '🦈', '🐠', '🦐', '🦑', '🐡', '🦭', '🦞'];
+
 export const friendNames = {
   '🐰': 'Bunny', '🐱': 'Cat', '🐶': 'Dog', '🐼': 'Panda',
   '🐨': 'Koala', '🦁': 'Lion', '🐸': 'Frog', '🐧': 'Penguin',
   '🦊': 'Fox', '🐹': 'Hamster', '🐻': 'Bear', '🐤': 'Chick',
+  '🐬': 'Dolphin', '🐳': 'Whale', '🐙': 'Octopus', '🦀': 'Crab',
+  '🐢': 'Turtle', '🦈': 'Shark', '🐠': 'Fish', '🦐': 'Shrimp',
+  '🦑': 'Squid', '🐡': 'Pufferfish', '🦭': 'Seal', '🦞': 'Lobster',
 };
 
 // おともだちごとの鳴き声(チップチューン風の音符データ: [周波数, 長さ, 開始遅延, 波形, 音量])
@@ -22,6 +28,18 @@ export const friendCries = {
   '🐹': [[1100, .05, 0], [1300, .05, .06], [1100, .05, .12]],
   '🐻': [[260, .2, 0, 'sawtooth', .12], [220, .22, .2, 'sawtooth', .12]],
   '🐤': [[1300, .07, 0], [1500, .07, .09]],
+  '🐬': [[900, .1, 0], [1200, .12, .1], [900, .1, .22]],
+  '🐳': [[180, .35, 0, 'sine', .2]],
+  '🐙': [[500, .08, 0], [400, .08, .09], [300, .08, .18]],
+  '🦀': [[700, .05, 0, 'square', .15], [700, .05, .08, 'square', .15]],
+  '🐢': [[300, .25, 0, 'sine', .15]],
+  '🦈': [[200, .2, 0, 'sawtooth', .15], [250, .2, .2, 'sawtooth', .15]],
+  '🐠': [[1000, .07, 0], [1150, .07, .09]],
+  '🦐': [[1200, .05, 0], [1400, .05, .07]],
+  '🦑': [[450, .12, 0], [350, .12, .13]],
+  '🐡': [[550, .1, 0, 'square', .15], [550, .1, .15, 'square', .15]],
+  '🦭': [[400, .15, 0], [500, .15, .16]],
+  '🦞': [[600, .06, 0, 'square', .15], [500, .06, .08, 'square', .15]],
 };
 
 export const foodList = [
@@ -32,11 +50,15 @@ export const foodList = [
 ];
 
 // ホームのぱっくんをタップしたときのあいさつ
-export const helloWords = ['Hello!', 'Hi!', "Let's play!", 'I love you!'];
+export const helloWords = [
+  'Hello!', 'Hi!', "Let's play!", 'I love you!',
+  'Peekaboo!', 'You are my friend!', 'Happy day!', 'Hooray!',
+];
 
 export const balloonColors = [
   ['#ff5a5a', 'Red'], ['#5aa0ff', 'Blue'], ['#ffd75a', 'Yellow'],
   ['#7ed957', 'Green'], ['#b07aff', 'Purple'], ['#ff8ac2', 'Pink'],
+  ['#ff9b3d', 'Orange'], ['#7de0e6', 'Light blue'],
 ];
 
 export const shapeList = [
