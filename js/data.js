@@ -66,6 +66,11 @@ export const shapeList = [
   ['🔶', 'Diamond'], ['🟩', 'Square'], ['🌙', 'Moon'],
 ];
 
+// おきがえの服(絵文字, 英語名)。着る位置・サイズは main.js の wornPos
+export const clothesList = [
+  ['👕', 'Shirt'], ['👖', 'Pants'], ['🧦', 'Socks'],
+];
+
 export const toyList = [
   ['🧸', 'Teddy bear'], ['🚗', 'Car'], ['⚽', 'Ball'], ['🪀', 'Yo-yo'],
   ['🦖', 'Dinosaur'], ['🚂', 'Train'], ['🎈', 'Balloon'], ['🥁', 'Drum'],
@@ -84,6 +89,7 @@ export const guides = {
   meal: 'たべものを タッチして たべさせてね',
   teeth: 'はを ゆびで こすって ばいきんを やっつけよう',
   bath: 'からだを なでなでして あわあわに してね',
+  dress: 'おようふくを タッチして きせてあげよう',
   tidy: 'おもちゃを タッチして はこに おかたづけしよう',
   sleep: 'でんきを けして ねんねさせてあげよう',
 };

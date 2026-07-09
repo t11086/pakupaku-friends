@@ -1,12 +1,12 @@
 // ゲーム本体(状態・画面遷移・各お世話あそび)
 import {
   allFriends, seaFriends, friendNames, foodList, balloonColors, shapeList,
-  toyList, hatOf, praiseWords, guides, helloWords,
+  toyList, clothesList, hatOf, praiseWords, guides, helloWords,
 } from './data.js';
 import { tone, sfx, cry, speak, speakEn } from './audio.js';
 
   // ---------- 状態 ----------
-  const tasks = { meal: false, teeth: false, bath: false, tidy: false, sleep: false };
+  const tasks = { meal: false, teeth: false, bath: false, dress: false, tidy: false, sleep: false };
   let day = Number(localStorage.getItem('pakupaku-day') || 1);
   let friends = JSON.parse(localStorage.getItem('pakupaku-zukan') || '[]');
   // なかよし度: おすそわけした回数(おともだち絵文字 → 回数)
@@ -25,6 +25,7 @@ import { tone, sfx, cry, speak, speakEn } from './audio.js';
       if (go === 'meal') setupMeal();
       if (go === 'teeth') setupTeeth();
       if (go === 'bath') setupBath();
+      if (go === 'dress') setupDress();
       if (go === 'tidy') setupTidy();
       if (go === 'sleep') setupSleep();
       if (go === 'zukan') renderZukan();
@@ -591,6 +592,63 @@ import { tone, sfx, cry, speak, speakEn } from './audio.js';
       speakEn('Splash, splash!');
       setTimeout(() => completeTask('bath'), 1200);
     };
+  }
+
+  // ---------- 👕 おきがえ ----------
+  // 服ごとの着る位置: [top, フォントサイズ, z-index](char-wrap基準のcqw)
+  // 口(top 55%〜67%)にかぶらないよう、シャツは68%より下から
+  const wornPos = {
+    '👕': ['68%', '40cqw', 6],
+    '👖': ['88%', '30cqw', 5],
+    '🧦': ['108%', '16cqw', 4],
+  };
+  function setupDress() {
+    const tray = document.getElementById('clothes-tray');
+    const char = document.getElementById('char-dress');
+    tray.innerHTML = '';
+    char.querySelectorAll('.worn-cloth').forEach(el => el.remove());
+    // シャツの色は毎回かわる(hue-rotateで絵文字の色相をずらす)
+    const hue = Math.floor(Math.random() * 360);
+    let left = clothesList.length;
+    clothesList.forEach(([c, en]) => {
+      const btn = document.createElement('button');
+      btn.className = 'cloth'; btn.textContent = c;
+      if (c === '👕') btn.style.filter = `hue-rotate(${hue}deg)`;
+      btn.addEventListener('click', () => {
+        if (btn.classList.contains('worn')) return;
+        btn.classList.add('worn');
+        speakEn(en + '!');
+        // 服がぱっくんまで飛んでいって、そのまま着る
+        const fly = document.createElement('div');
+        fly.className = 'flying-food'; fly.textContent = c;
+        if (c === '👕') fly.style.filter = `hue-rotate(${hue}deg)`;
+        const from = btn.getBoundingClientRect();
+        const to = char.getBoundingClientRect();
+        fly.style.left = from.left + 'px'; fly.style.top = from.top + 'px';
+        document.body.appendChild(fly);
+        requestAnimationFrame(() => {
+          fly.style.left = (to.left + to.width * .3) + 'px';
+          fly.style.top = (to.top + to.height * .55) + 'px';
+          fly.style.transform = 'scale(.4)';
+        });
+        setTimeout(() => {
+          fly.remove(); sfx.pop();
+          const [top, size, z] = wornPos[c];
+          const worn = document.createElement('div');
+          worn.className = 'worn-cloth'; worn.textContent = c;
+          worn.style.top = top; worn.style.fontSize = size; worn.style.zIndex = z;
+          if (c === '👕') worn.style.filter = `hue-rotate(${hue}deg)`;
+          char.appendChild(worn);
+          char.classList.add('happy');
+          setTimeout(() => char.classList.remove('happy'), 500);
+          if (--left === 0) {
+            speakEn('Looking good!'); // 褒め言葉はこの後queueで続く
+            setTimeout(() => completeTask('dress'), 700);
+          }
+        }, 520);
+      });
+      tray.appendChild(btn);
+    });
   }
 
   // ---------- 🧸 おかたづけ ----------

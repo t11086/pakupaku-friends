@@ -132,6 +132,18 @@
   .drop { position: fixed; font-size: 7vw; z-index: 42; pointer-events: none; animation: fall .8s linear forwards; }
   @keyframes fall { to { transform: translateY(90vh); opacity: 0; } }
 
+  /* ===== おきがえ ===== */
+  .cloth { font-size: 14vw; background: none; border: none; transition: transform .1s; }
+  .cloth:active { transform: scale(1.2); }
+  .cloth.worn { visibility: hidden; }
+  /* 着た服は .char の中に置いて、いっしょにバウンドさせる */
+  .worn-cloth {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    line-height: 1; pointer-events: none; animation: pop-in .25s;
+  }
+  /* ズボン・くつしたがキャラの下にはみ出すぶん、トレイを下げる */
+  .clothes-tray { margin-top: 15vw; }
+
   /* ===== ねんね ===== */
   #screen-sleep.night { background: linear-gradient(#1a2350, #3b3560); }
   #screen-sleep.night .guide { background: rgba(255,255,255,.2); color: #fff; }
@@ -313,6 +325,7 @@
     <span class="stamp" data-task="meal">🍚</span>
     <span class="stamp" data-task="teeth">🪥</span>
     <span class="stamp" data-task="bath">🛁</span>
+    <span class="stamp" data-task="dress">👕</span>
     <span class="stamp" data-task="tidy">🧸</span>
     <span class="stamp" data-task="sleep">🌙</span>
   </div>
@@ -320,6 +333,7 @@
     <button data-go="meal"><span class="icon">🍚</span>ごはん</button>
     <button data-go="teeth"><span class="icon">🪥</span>はみがき</button>
     <button data-go="bath"><span class="icon">🛁</span>おふろ</button>
+    <button data-go="dress"><span class="icon">👕</span>おきがえ</button>
     <button data-go="tidy"><span class="icon">🧸</span>おかたづけ</button>
     <button data-go="sleep"><span class="icon">🌙</span>ねんね</button>
     <button data-go="zukan" style="background:#fff3f8"><span class="icon">📖</span>ずかん</button>
@@ -368,6 +382,19 @@
       <div class="cheek l"></div><div class="cheek r"></div><div class="mouth"></div>
     </div></div>
     <button class="shower-btn" id="shower-btn" style="visibility:hidden">🚿</button>
+  </div>
+</div>
+
+<!-- おきがえ -->
+<div id="screen-dress" class="screen">
+  <button class="back-btn">← もどる</button>
+  <div class="play-area">
+    <div class="guide" id="dress-guide">おようふくを タッチして きせてあげよう</div>
+    <div class="char-wrap"><div class="char" id="char-dress">
+      <div class="char-body"></div><div class="eye l"></div><div class="eye r"></div>
+      <div class="cheek l"></div><div class="cheek r"></div><div class="mouth"></div>
+    </div></div>
+    <div class="food-tray clothes-tray" id="clothes-tray"></div>
   </div>
 </div>
 
