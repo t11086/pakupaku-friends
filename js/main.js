@@ -596,11 +596,12 @@ import { tone, sfx, cry, speak, speakEn } from './audio.js';
 
   // ---------- 👕 おきがえ ----------
   // 服ごとの着る位置: [top, フォントサイズ, z-index](char-wrap基準のcqw)
-  // 口(top 55%〜67%)にかぶらないよう、シャツは68%より下から
+  // 口(top 55%〜67%)にかぶらないよう、シャツは72%から。下2つは重なりすぎないよう間隔をあける
+  // 🧦の下端(136%)がトレイにかぶらないよう .clothes-tray の margin-top と連動
   const wornPos = {
-    '👕': ['68%', '40cqw', 6],
-    '👖': ['88%', '30cqw', 5],
-    '🧦': ['108%', '16cqw', 4],
+    '👕': ['72%', '40cqw', 6],
+    '👖': ['96%', '30cqw', 5],
+    '🧦': ['120%', '16cqw', 4],
   };
   function setupDress() {
     const tray = document.getElementById('clothes-tray');

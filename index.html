@@ -146,8 +146,8 @@
     from { transform: translateX(-50%) scale(.85); }
     to   { transform: translateX(-50%) scale(1); }
   }
-  /* ズボン・くつしたがキャラの下にはみ出すぶん、トレイを下げる */
-  .clothes-tray { margin-top: 15vw; }
+  /* ズボン・くつしたがキャラの下にはみ出すぶん、トレイを下げる(🧦の下端 = char-wrap の136% ≒ 20vw下) */
+  .clothes-tray { margin-top: min(22vw, 104px); }
 
   /* ===== ねんね ===== */
   #screen-sleep.night { background: linear-gradient(#1a2350, #3b3560); }
