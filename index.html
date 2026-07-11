@@ -139,7 +139,12 @@
   /* 着た服は .char の中に置いて、いっしょにバウンドさせる */
   .worn-cloth {
     position: absolute; left: 50%; transform: translateX(-50%);
-    line-height: 1; pointer-events: none; animation: pop-in .25s;
+    line-height: 1; pointer-events: none; animation: worn-pop .25s;
+  }
+  /* pop-in は transform を丸ごと上書きして translateX(-50%) が外れ、右にズレて見えるため専用にする */
+  @keyframes worn-pop {
+    from { transform: translateX(-50%) scale(.85); }
+    to   { transform: translateX(-50%) scale(1); }
   }
   /* ズボン・くつしたがキャラの下にはみ出すぶん、トレイを下げる */
   .clothes-tray { margin-top: 15vw; }
