@@ -618,22 +618,23 @@ import { tone, sfx, cry, speak, speakEn } from './audio.js';
         if (btn.classList.contains('worn')) return;
         btn.classList.add('worn');
         speakEn(en + '!');
-        // 服がぱっくんまで飛んでいって、そのまま着る
+        // 服が「着る位置」まで直接飛んでいって、そのまま着る(口元には吸い込ませない)
+        const [top, size, z] = wornPos[c];
         const fly = document.createElement('div');
         fly.className = 'flying-food'; fly.textContent = c;
         if (c === '👕') fly.style.filter = `hue-rotate(${hue}deg)`;
         const from = btn.getBoundingClientRect();
-        const to = char.getBoundingClientRect();
+        const to = char.getBoundingClientRect(); // .char は char-wrap と同サイズ → cqw ≒ to.width の%
+        const endSize = to.width * parseFloat(size) / 100;
         fly.style.left = from.left + 'px'; fly.style.top = from.top + 'px';
         document.body.appendChild(fly);
         requestAnimationFrame(() => {
-          fly.style.left = (to.left + to.width * .3) + 'px';
-          fly.style.top = (to.top + to.height * .55) + 'px';
-          fly.style.transform = 'scale(.4)';
+          fly.style.left = (to.left + (to.width - endSize) / 2) + 'px';
+          fly.style.top = (to.top + to.height * parseFloat(top) / 100) + 'px';
+          fly.style.fontSize = endSize + 'px';
         });
         setTimeout(() => {
           fly.remove(); sfx.pop();
-          const [top, size, z] = wornPos[c];
           const worn = document.createElement('div');
           worn.className = 'worn-cloth'; worn.textContent = c;
           worn.style.top = top; worn.style.fontSize = size; worn.style.zIndex = z;
